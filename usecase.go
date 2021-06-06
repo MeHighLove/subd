@@ -20,5 +20,7 @@ type UseCase interface {
 	GetRecommended(uid uint64, page int) (models.EventCards, error)
 	GetNear(coord models.Coordinates, page int) (models.EventCardsWithCoords, error)*/
 	CreateNewForum(newForum *models.Forum) (models.Forum, int)
+	CreateNewThread(newThread *models.Thread) (models.Thread, int)
 	GetForum(slug string) (models.Forum, int)
+	GetForumUsers(slug string, limit int, since string, desc bool) (models.Users, int)
 }

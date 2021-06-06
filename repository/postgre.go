@@ -19,11 +19,43 @@ func NewSomeDatabase(conn *pgxpool.Pool) event.Repository {
 	return &SomeDatabase{pool: conn}
 }
 
+func (sd SomeDatabase) CheckThread(slug string) (bool, error) {
+	var id []uint64
+	err := pgxscan.Select(context.Background(), sd.pool, &id,
+		`SELECT 1 FROM threads
+	WHERE slug = $1 LIMIT 1`, slug)
+
+	if errors.As(err, &pgx.ErrNoRows) || len(id) == 0 {
+		return false, nil
+	}
+
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func (sd SomeDatabase) CheckForum(slug string) (bool, error) {
+	var id []uint64
+	err := pgxscan.Select(context.Background(), sd.pool, &id,
+		`SELECT 1 FROM forums
+	WHERE slug = $1 LIMIT 1`, slug)
+
+	if errors.As(err, &pgx.ErrNoRows) || len(id) == 0 {
+		return false, nil
+	}
+
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 func (sd SomeDatabase) CheckUser(user string) (bool, error) {
 	var id []uint64
 	err := pgxscan.Select(context.Background(), sd.pool, &id,
-		`SELECT id FROM users
-	WHERE nickname = $1`, user)
+		`SELECT 1 FROM users
+	WHERE nickname = $1 LIMIT 1`, user)
 
 	if errors.As(err, &pgx.ErrNoRows) || len(id) == 0 {
 		return false, nil
@@ -76,6 +108,63 @@ func (sd SomeDatabase) GetForum(slug string) (models.Forum, int) {
 	}
 
 	return forum[0], http.StatusOK
+}
+
+//мб здесь падает, потому что нет перехода от даты к строке у поля created
+func (sd SomeDatabase) GetThread(slug string) (models.Thread, error) {
+	var ev []models.Thread
+	err := pgxscan.Select(context.Background(), sd.pool, &ev,
+		`SELECT * FROM threads WHERE slug = $1`, slug)
+
+	if errors.As(err, &pgx.ErrNoRows) || len(ev) == 0 {
+		return models.Thread{}, nil
+	}
+
+	if err != nil {
+		return models.Thread{}, err
+	}
+
+	return ev[0], nil
+}
+
+func (sd SomeDatabase) AddNewThread(newThread models.Thread) (uint64, error) {
+	var id uint64
+	err := sd.pool.QueryRow(context.Background(),
+		`INSERT INTO threads VALUES (default, $1, $2, $3, $4, $5, $6, default) RETURNING id`,
+		newThread.Author, newThread.Created, newThread.Forum, newThread.Message,
+		newThread.Slug, newThread.Title).Scan(&id)
+	if err != nil {
+		return 0, err
+	}
+
+	return id, nil
+}
+
+func (sd SomeDatabase) GetForumUsers(slug string, limit int, since string, desc bool) (models.Users, error) {
+	var users models.Users
+	var err error
+	if desc == true {
+		err = pgxscan.Select(context.Background(), sd.pool, &users,
+			`select users.nickname, fullname, email, about from forum_users join users
+			on forum_users.nickname = users.nickname
+			where forum_users.forum = $1 AND lower(users.nickname) > lower($2) 
+			order by lower(users.nickname) DESC LIMIT $3`, slug, since, limit)
+	} else {
+		err = pgxscan.Select(context.Background(), sd.pool, &users,
+			`select users.nickname, fullname, email, about from forum_users join users
+			on forum_users.nickname = users.nickname
+			where forum_users.forum = $1 AND lower(users.nickname) > lower($2) 
+			order by lower(users.nickname) LIMIT $3`, slug, since, limit)
+	}
+	if errors.As(err, &pgx.ErrNoRows) || len(users) == 0 {
+		return models.Users{}, nil
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return users, nil
 }
 
 

@@ -1,5 +1,7 @@
 package models
 
+import "github.com/go-openapi/strfmt"
+
 type Forum struct {
 	Title string `json:"title"`
 	Owner string `json:"user"`
@@ -7,6 +9,27 @@ type Forum struct {
 	Threads uint64 `json:"threads"`
 	Slug string `json:"slug"`
 }
+
+type Thread struct {
+	Id uint64 `json:"id"`
+	Author string `json:"author"`
+	Created strfmt.DateTime `json:"created"`
+	Forum string `json:"forum"`
+	Message string `json:"message"`
+	Slug string `json:"slug"`
+	Title string `json:"title"`
+	Votes int `json:"votes"`
+}
+
+type User struct {
+	Nickname string `json:"nickname"`
+	Fullname string `json:"fullname"`
+	About string `json:"about"`
+	Email strfmt.Email `json:"email"`
+}
+
+//easyjson:json
+type Users []User
 
 
 /*import "time"

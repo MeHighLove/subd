@@ -21,4 +21,9 @@ type Repository interface {
 	AddNewForum(newForum *models.Forum) (error, bool)
 	GetForumCounts(slug string) (uint64, uint64, error)
 	GetForum(slug string) (models.Forum, int)
+	CheckForum(slug string) (bool, error)
+	CheckThread(slug string) (bool, error)
+	GetThread(slug string) (models.Thread, error)
+	AddNewThread(newThread models.Thread) (uint64, error)
+	GetForumUsers(slug string, limit int, since string, desc bool) (models.Users, error)
 }

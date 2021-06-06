@@ -15,6 +15,61 @@ func NewSmth(e smth.Repository) smth.UseCase {
 	return &Smth{repo: e}
 }
 
+func (s Smth) GetForumUsers(slug string, limit int, since string, desc bool) (models.Users, int) {
+	isExisted, err := s.repo.CheckForum(slug)
+	if err != nil {
+		return models.Users{}, http.StatusInternalServerError
+	}
+	if !isExisted {
+		return models.Users{}, constants.NotFound
+	}
+
+	users, err := s.repo.GetForumUsers(slug, limit, since, desc)
+	if err != nil {
+		return models.Users{}, http.StatusInternalServerError
+	}
+
+	return users, http.StatusOK
+}
+
+func (s Smth) CreateNewThread(newThread *models.Thread) (models.Thread, int) {
+	isExist, err := s.repo.CheckUser(newThread.Author)
+	if err != nil {
+		return models.Thread{}, http.StatusInternalServerError
+	}
+	if !isExist {
+		return models.Thread{}, constants.NotFound
+	}
+
+	isExisted, err := s.repo.CheckForum(newThread.Forum)
+	if err != nil {
+		return models.Thread{}, http.StatusInternalServerError
+	}
+	if !isExisted {
+		return models.Thread{}, constants.NotFound
+	}
+
+	isExisted, err = s.repo.CheckThread(newThread.Slug)
+	if err != nil {
+		return models.Thread{}, http.StatusInternalServerError
+	}
+	if isExisted {
+		newThread2, err := s.repo.GetThread(newThread.Slug)
+		if err != nil {
+			return models.Thread{}, http.StatusInternalServerError
+		}
+		return newThread2, http.StatusConflict
+	}
+
+	newThread.Id, err = s.repo.AddNewThread(*newThread)
+	if err != nil {
+		return models.Thread{}, http.StatusInternalServerError
+	}
+
+	return *newThread, http.StatusCreated
+}
+
+//Здесь может быть ошибка, потому что отдаем данные не ранее созданного форума, а те, которые пришли на вход(пространство для + рпс смотри выше)
 func (s Smth) CreateNewForum(newForum *models.Forum) (models.Forum, int) {
 	isExist, err := s.repo.CheckUser(newForum.Owner)
 	if err != nil {
@@ -24,7 +79,7 @@ func (s Smth) CreateNewForum(newForum *models.Forum) (models.Forum, int) {
 		return models.Forum{}, constants.NotFound
 	}
 
-	err, isExisted := s.repo.AddNewForum(newForum)
+	isExisted, err := s.repo.CheckForum(newForum.Slug)
 	if err != nil {
 		return models.Forum{}, http.StatusInternalServerError
 	}
@@ -34,6 +89,10 @@ func (s Smth) CreateNewForum(newForum *models.Forum) (models.Forum, int) {
 			return models.Forum{}, http.StatusInternalServerError
 		}
 		return *newForum, http.StatusConflict
+	}
+	err, _ = s.repo.AddNewForum(newForum)
+	if err != nil {
+		return models.Forum{}, http.StatusInternalServerError
 	}
 
 	return *newForum, http.StatusCreated

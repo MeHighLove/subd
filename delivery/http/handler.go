@@ -4,6 +4,7 @@ import (
 	"github.com/labstack/echo"
 	"github.com/mailru/easyjson"
 	"net/http"
+	"strconv"
 	smth "subd"
 	"subd/constants"
 	"subd/models"
@@ -19,6 +20,8 @@ func CreateSmthHandler(e *echo.Echo, uc smth.UseCase) {
 
 	e.POST("/api/forum/create", handler.CreateForum)
 	e.GET("/api/:slug/details", handler.ForumDetails)
+	e.POST("/api/:slug/create", handler.CreateThread)
+	e.GET("api/:slug/users", handler.GetForumUsers)
 	/*e.GET("/api/v1/", eventHandler.GetAllEvents, middleware.GetPage)
 	e.GET("/api/v1/event/:id", eventHandler.GetOneEvent, middleware.GetId)
 	e.GET("/link/event/:id", eventHandler.GetEventLink, middleware.GetId)
@@ -32,6 +35,34 @@ func CreateSmthHandler(e *echo.Echo, uc smth.UseCase) {
 	e.POST("/api/v1/save/:id", eventHandler.Save, middleware.GetId)
 	e.GET("api/v1/event/:id/image", eventHandler.GetImage, middleware.GetId)
 	e.GET("/api/v1/recommend", eventHandler.Recommend, middleware.GetPage, auth.GetSession)*/
+}
+
+func (sd SmthHandler) GetForumUsers(c echo.Context) error {
+	defer c.Request().Body.Close()
+
+	slug := c.Param("slug")
+	limit, err := strconv.Atoi(c.QueryParam("limit"))
+	if err != nil || limit == 0 {
+		limit = 100
+	}
+	since := c.QueryParam("since")
+	desc, err := strconv.ParseBool(c.QueryParam("desc"))
+	if err != nil {
+		desc = false
+	}
+
+	users, status := sd.UseCase.GetForumUsers(slug, limit, since, desc)
+	if status == constants.NotFound {
+		return echo.NewHTTPError(http.StatusNotFound, "Can't find forum with slug " + slug)
+	}
+
+	if _, err := easyjson.MarshalToWriter(users, c.Response().Writer); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	c.Response().Status = status
+
+	return nil
 }
 
 func (sd SmthHandler) ForumDetails(c echo.Context) error {
@@ -68,6 +99,31 @@ func (sd SmthHandler) CreateForum(c echo.Context) error {
 	}
 
 	if _, err := easyjson.MarshalToWriter(forum, c.Response().Writer); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	c.Response().Status = status
+
+	return nil
+}
+
+func (sd SmthHandler) CreateThread(c echo.Context) error {
+	defer c.Request().Body.Close()
+
+	newThread := &models.Thread{}
+
+	if err := easyjson.UnmarshalFromReader(c.Request().Body, newThread); err != nil {
+		return echo.NewHTTPError(http.StatusTeapot, err.Error())
+	}
+
+	newThread.Forum = c.Param("slug")
+
+	thread, status := sd.UseCase.CreateNewThread(newThread)
+	if status == constants.NotFound {
+		return echo.NewHTTPError(http.StatusNotFound, "Can't find user with name " + newThread.Author)
+	}
+
+	if _, err := easyjson.MarshalToWriter(thread, c.Response().Writer); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
