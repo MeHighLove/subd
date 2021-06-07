@@ -266,6 +266,28 @@ func (sd SomeDatabase) GetForumThreads(slug string, limit int, since string, des
 	return threads, nil
 }
 
+func (sd SomeDatabase) EditMessage(id int, message string) error {
+	_, err := sd.pool.Exec(context.Background(),
+		`UPDATE posts SET is_edited = true, message = $1 WHERE id = $2`, message, id)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (sd SomeDatabase) Clear() error {
+	_, err := sd.pool.Exec(context.Background(),
+		`TRUNCATE users, forums, threads, posts, votes, forum_users`)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 
 /*func (ed EventDatabase) GetNearEvents(now time.Time, coord models.Coordinates, page int) ([]models.EventCardWithCoordsSQL, error) {
 	var events []models.EventCardWithCoordsSQL

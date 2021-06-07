@@ -32,4 +32,6 @@ type Repository interface {
 	GetForumUsers(slug string, limit int, since string, desc bool) (models.Users, error)
 	AddForumUsers(slug string, author string) error
 	GetForumThreads(slug string, limit int, since string, desc bool) (models.Threads, error)
+	EditMessage(id int, message string) error
+	Clear() error
 }

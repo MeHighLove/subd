@@ -166,6 +166,34 @@ func (s Smth) GetPost(id int, related string) (models.FullPost, int) {
 
 }
 
+func (s Smth) EditMessage(id int, message string) (models.Post, int) {
+	isExisted, err := s.repo.CheckPost(id)
+	if err != nil {
+		return models.Post{}, http.StatusInternalServerError
+	}
+	if !isExisted {
+		return models.Post{}, constants.NotFound
+	}
+
+	err = s.repo.EditMessage(id, message)
+	if err != nil {
+		return models.Post{}, http.StatusInternalServerError
+	}
+
+	post, _ := s.repo.GetPost(id)
+
+	return post, http.StatusOK
+}
+
+func (s Smth) Clear() error {
+	err := s.repo.Clear()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 /*func (e Event) GetNear(coord models.Coordinates, page int) (models.EventCardsWithCoords, error) {
 	sqlEvents, err := e.repo.GetNearEvents(time.Now(), coord, page)
 	if err != nil {

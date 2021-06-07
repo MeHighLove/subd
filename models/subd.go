@@ -17,6 +17,10 @@ type FullPost struct {
 	Thread *Thread `json:"thread"`
 }
 
+type NewMessage struct {
+	Message string `json:"message"`
+}
+
 type Post struct {
 	Author   string          `json:"author"`
 	Created  strfmt.DateTime `json:"created"`

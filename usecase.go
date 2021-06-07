@@ -25,4 +25,6 @@ type UseCase interface {
 	GetForumUsers(slug string, limit int, since string, desc bool) (models.Users, int)
 	GetThreads(slug string, limit int, since string, desc bool) (models.Threads, int)
 	GetPost(id int, related string) (models.FullPost, int)
+	EditMessage(id int, message string) (models.Post, int)
+	Clear() error
 }

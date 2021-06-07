@@ -550,7 +550,73 @@ func (v *Post) UnmarshalJSON(data []byte) error {
 func (v *Post) UnmarshalEasyJSON(l *jlexer.Lexer) {
 	easyjsonD2b7633eDecodeSubdModels5(l, v)
 }
-func easyjsonD2b7633eDecodeSubdModels6(in *jlexer.Lexer, out *FullPost) {
+func easyjsonD2b7633eDecodeSubdModels6(in *jlexer.Lexer, out *NewMessage) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return
+	}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeFieldName(false)
+		in.WantColon()
+		if in.IsNull() {
+			in.Skip()
+			in.WantComma()
+			continue
+		}
+		switch key {
+		case "message":
+			out.Message = string(in.String())
+		default:
+			in.SkipRecursive()
+		}
+		in.WantComma()
+	}
+	in.Delim('}')
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func easyjsonD2b7633eEncodeSubdModels6(out *jwriter.Writer, in NewMessage) {
+	out.RawByte('{')
+	first := true
+	_ = first
+	{
+		const prefix string = ",\"message\":"
+		out.RawString(prefix[1:])
+		out.String(string(in.Message))
+	}
+	out.RawByte('}')
+}
+
+// MarshalJSON supports json.Marshaler interface
+func (v NewMessage) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjsonD2b7633eEncodeSubdModels6(&w, v)
+	return w.Buffer.BuildBytes(), w.Error
+}
+
+// MarshalEasyJSON supports easyjson.Marshaler interface
+func (v NewMessage) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjsonD2b7633eEncodeSubdModels6(w, v)
+}
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (v *NewMessage) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	easyjsonD2b7633eDecodeSubdModels6(&r, v)
+	return r.Error()
+}
+
+// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+func (v *NewMessage) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjsonD2b7633eDecodeSubdModels6(l, v)
+}
+func easyjsonD2b7633eDecodeSubdModels7(in *jlexer.Lexer, out *FullPost) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -619,7 +685,7 @@ func easyjsonD2b7633eDecodeSubdModels6(in *jlexer.Lexer, out *FullPost) {
 		in.Consumed()
 	}
 }
-func easyjsonD2b7633eEncodeSubdModels6(out *jwriter.Writer, in FullPost) {
+func easyjsonD2b7633eEncodeSubdModels7(out *jwriter.Writer, in FullPost) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -665,27 +731,27 @@ func easyjsonD2b7633eEncodeSubdModels6(out *jwriter.Writer, in FullPost) {
 // MarshalJSON supports json.Marshaler interface
 func (v FullPost) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjsonD2b7633eEncodeSubdModels6(&w, v)
+	easyjsonD2b7633eEncodeSubdModels7(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v FullPost) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjsonD2b7633eEncodeSubdModels6(w, v)
+	easyjsonD2b7633eEncodeSubdModels7(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *FullPost) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjsonD2b7633eDecodeSubdModels6(&r, v)
+	easyjsonD2b7633eDecodeSubdModels7(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *FullPost) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjsonD2b7633eDecodeSubdModels6(l, v)
+	easyjsonD2b7633eDecodeSubdModels7(l, v)
 }
-func easyjsonD2b7633eDecodeSubdModels7(in *jlexer.Lexer, out *Forum) {
+func easyjsonD2b7633eDecodeSubdModels8(in *jlexer.Lexer, out *Forum) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -724,7 +790,7 @@ func easyjsonD2b7633eDecodeSubdModels7(in *jlexer.Lexer, out *Forum) {
 		in.Consumed()
 	}
 }
-func easyjsonD2b7633eEncodeSubdModels7(out *jwriter.Writer, in Forum) {
+func easyjsonD2b7633eEncodeSubdModels8(out *jwriter.Writer, in Forum) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -759,23 +825,23 @@ func easyjsonD2b7633eEncodeSubdModels7(out *jwriter.Writer, in Forum) {
 // MarshalJSON supports json.Marshaler interface
 func (v Forum) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjsonD2b7633eEncodeSubdModels7(&w, v)
+	easyjsonD2b7633eEncodeSubdModels8(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v Forum) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjsonD2b7633eEncodeSubdModels7(w, v)
+	easyjsonD2b7633eEncodeSubdModels8(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *Forum) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjsonD2b7633eDecodeSubdModels7(&r, v)
+	easyjsonD2b7633eDecodeSubdModels8(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *Forum) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjsonD2b7633eDecodeSubdModels7(l, v)
+	easyjsonD2b7633eDecodeSubdModels8(l, v)
 }

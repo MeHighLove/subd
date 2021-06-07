@@ -26,6 +26,8 @@ func CreateSmthHandler(e *echo.Echo, uc smth.UseCase) {
 	e.GET("api/:slug/users", handler.GetForumUsers)
 	e.GET("/api/:slug/threads", handler.GetThreads)
 	e.GET("/api/post/:id/details", handler.GetPostDetails)
+	e.POST("/api/post/:id/details", handler.EditMessage)
+	e.GET("/api/service/clear", handler.Clear)
 	/*e.GET("/api/v1/", eventHandler.GetAllEvents, middleware.GetPage)
 	e.GET("/api/v1/event/:id", eventHandler.GetOneEvent, middleware.GetId)
 	e.GET("/link/event/:id", eventHandler.GetEventLink, middleware.GetId)
@@ -39,6 +41,45 @@ func CreateSmthHandler(e *echo.Echo, uc smth.UseCase) {
 	e.POST("/api/v1/save/:id", eventHandler.Save, middleware.GetId)
 	e.GET("api/v1/event/:id/image", eventHandler.GetImage, middleware.GetId)
 	e.GET("/api/v1/recommend", eventHandler.Recommend, middleware.GetPage, auth.GetSession)*/
+}
+
+func (sd SmthHandler) Clear(c echo.Context) error {
+	defer c.Request().Body.Close()
+
+	err := sd.UseCase.Clear()
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	return nil
+}
+
+func (sd SmthHandler) EditMessage(c echo.Context) error {
+	defer c.Request().Body.Close()
+
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil{
+		return echo.NewHTTPError(http.StatusTeapot, err.Error())
+	}
+
+	newMessage := &models.NewMessage{}
+
+	if err := easyjson.UnmarshalFromReader(c.Request().Body, newMessage); err != nil {
+		return echo.NewHTTPError(http.StatusTeapot, err.Error())
+	}
+
+	post, status := sd.UseCase.EditMessage(id, newMessage.Message)
+	if status == constants.NotFound {
+		return echo.NewHTTPError(http.StatusNotFound, "Can't find post with id "+fmt.Sprint(id))
+	}
+
+	if _, err := easyjson.MarshalToWriter(post, c.Response().Writer); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	c.Response().Status = status
+
+	return nil
 }
 
 func (sd SmthHandler) GetPostDetails(c echo.Context) error {
