@@ -27,4 +27,5 @@ type UseCase interface {
 	GetPost(id int, related string) (models.FullPost, int)
 	EditMessage(id int, message string) (models.Post, int)
 	Clear() error
+	Status() (models.Status, error)
 }

@@ -34,4 +34,5 @@ type Repository interface {
 	GetForumThreads(slug string, limit int, since string, desc bool) (models.Threads, error)
 	EditMessage(id int, message string) error
 	Clear() error
+	Status() (models.Status, error)
 }

@@ -194,6 +194,15 @@ func (s Smth) Clear() error {
 	return nil
 }
 
+func (s Smth) Status() (models.Status, error) {
+	status, err := s.repo.Status()
+	if err != nil {
+		return models.Status{}, err
+	}
+
+	return status, nil
+}
+
 /*func (e Event) GetNear(coord models.Coordinates, page int) (models.EventCardsWithCoords, error) {
 	sqlEvents, err := e.repo.GetNearEvents(time.Now(), coord, page)
 	if err != nil {

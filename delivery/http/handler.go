@@ -28,6 +28,7 @@ func CreateSmthHandler(e *echo.Echo, uc smth.UseCase) {
 	e.GET("/api/post/:id/details", handler.GetPostDetails)
 	e.POST("/api/post/:id/details", handler.EditMessage)
 	e.GET("/api/service/clear", handler.Clear)
+	e.GET("/api/service/status", handler.Status)
 	/*e.GET("/api/v1/", eventHandler.GetAllEvents, middleware.GetPage)
 	e.GET("/api/v1/event/:id", eventHandler.GetOneEvent, middleware.GetId)
 	e.GET("/link/event/:id", eventHandler.GetEventLink, middleware.GetId)
@@ -41,6 +42,21 @@ func CreateSmthHandler(e *echo.Echo, uc smth.UseCase) {
 	e.POST("/api/v1/save/:id", eventHandler.Save, middleware.GetId)
 	e.GET("api/v1/event/:id/image", eventHandler.GetImage, middleware.GetId)
 	e.GET("/api/v1/recommend", eventHandler.Recommend, middleware.GetPage, auth.GetSession)*/
+}
+
+func (sd SmthHandler) Status(c echo.Context) error {
+	defer c.Request().Body.Close()
+
+	status, err := sd.UseCase.Status()
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	if _, err := easyjson.MarshalToWriter(status, c.Response().Writer); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	return nil
 }
 
 func (sd SmthHandler) Clear(c echo.Context) error {

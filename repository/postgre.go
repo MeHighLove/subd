@@ -288,6 +288,21 @@ func (sd SomeDatabase) Clear() error {
 	return nil
 }
 
+func (sd SomeDatabase) Status() (models.Status, error) {
+	status := models.Status{}
+	err := sd.pool.QueryRow(context.Background(),
+		`SELECT (SELECT count(id) FROM forums) as forums, 
+			(SELECT count(id) FROM posts) as posts, 
+			(SELECT count(id) FROM users) as users,
+			(SELECT count(id) FROM threads) as threads`).Scan(&status.Forum, &status.Post, &status.User, &status.Thread)
+
+	if err != nil {
+		return models.Status{}, err
+	}
+
+	return status, nil
+}
+
 
 /*func (ed EventDatabase) GetNearEvents(now time.Time, coord models.Coordinates, page int) ([]models.EventCardWithCoordsSQL, error) {
 	var events []models.EventCardWithCoordsSQL
