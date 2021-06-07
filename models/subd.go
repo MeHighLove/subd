@@ -10,6 +10,24 @@ type Forum struct {
 	Slug string `json:"slug"`
 }
 
+type FullPost struct {
+	Author *User   `json:"author"`
+	Forum  *Forum  `json:"forum"`
+	Post   *Post   `json:"post"`
+	Thread *Thread `json:"thread"`
+}
+
+type Post struct {
+	Author   string          `json:"author"`
+	Created  strfmt.DateTime `json:"created"`
+	Forum    string          `json:"forum"`
+	Id       int           `json:"id"`
+	IsEdited bool            `json:"isEdited"`
+	Message  string          `json:"message"`
+	Parent   int           `json:"parent"`
+	Thread   int           `json:"thread"`
+}
+
 type Thread struct {
 	Id uint64 `json:"id"`
 	Author string `json:"author"`
@@ -31,6 +49,11 @@ type User struct {
 //easyjson:json
 type Users []User
 
+//easyjson:json
+type Threads []Thread
+
+//easyjson:json
+type Posts []*Post
 
 /*import "time"
 

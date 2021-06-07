@@ -1,6 +1,7 @@
 package http
 
 import (
+	"fmt"
 	"github.com/labstack/echo"
 	"github.com/mailru/easyjson"
 	"net/http"
@@ -14,6 +15,7 @@ type SmthHandler struct {
 	UseCase   smth.UseCase
 }
 
+//TODO Разобраться с чеками(они все не нужны)
 func CreateSmthHandler(e *echo.Echo, uc smth.UseCase) {
 	handler := SmthHandler{UseCase: uc}
 
@@ -22,6 +24,8 @@ func CreateSmthHandler(e *echo.Echo, uc smth.UseCase) {
 	e.GET("/api/:slug/details", handler.ForumDetails)
 	e.POST("/api/:slug/create", handler.CreateThread)
 	e.GET("api/:slug/users", handler.GetForumUsers)
+	e.GET("/api/:slug/threads", handler.GetThreads)
+	e.GET("/api/post/:id/details", handler.GetPostDetails)
 	/*e.GET("/api/v1/", eventHandler.GetAllEvents, middleware.GetPage)
 	e.GET("/api/v1/event/:id", eventHandler.GetOneEvent, middleware.GetId)
 	e.GET("/link/event/:id", eventHandler.GetEventLink, middleware.GetId)
@@ -35,6 +39,57 @@ func CreateSmthHandler(e *echo.Echo, uc smth.UseCase) {
 	e.POST("/api/v1/save/:id", eventHandler.Save, middleware.GetId)
 	e.GET("api/v1/event/:id/image", eventHandler.GetImage, middleware.GetId)
 	e.GET("/api/v1/recommend", eventHandler.Recommend, middleware.GetPage, auth.GetSession)*/
+}
+
+func (sd SmthHandler) GetPostDetails(c echo.Context) error {
+	defer c.Request().Body.Close()
+
+	related := c.QueryParam("related")
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil{
+		return echo.NewHTTPError(http.StatusTeapot, err.Error())
+	}
+
+	post, status := sd.UseCase.GetPost(id, related)
+	if status == constants.NotFound {
+		return echo.NewHTTPError(http.StatusNotFound, "Can't find post with id " + fmt.Sprint(id))
+	}
+
+	if _, err := easyjson.MarshalToWriter(post, c.Response().Writer); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	c.Response().Status = status
+
+	return nil
+}
+
+func (sd SmthHandler) GetThreads(c echo.Context) error {
+	defer c.Request().Body.Close()
+
+	slug := c.Param("slug")
+	limit, err := strconv.Atoi(c.QueryParam("limit"))
+	if err != nil || limit == 0 {
+		limit = 100
+	}
+	since := c.QueryParam("since")
+	desc, err := strconv.ParseBool(c.QueryParam("desc"))
+	if err != nil {
+		desc = false
+	}
+
+	threads, status := sd.UseCase.GetThreads(slug, limit, since, desc)
+	if status == constants.NotFound {
+		return echo.NewHTTPError(http.StatusNotFound, "Can't find forum with slug " + slug)
+	}
+
+	if _, err := easyjson.MarshalToWriter(threads, c.Response().Writer); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	c.Response().Status = status
+
+	return nil
 }
 
 func (sd SmthHandler) GetForumUsers(c echo.Context) error {

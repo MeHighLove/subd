@@ -23,7 +23,13 @@ type Repository interface {
 	GetForum(slug string) (models.Forum, int)
 	CheckForum(slug string) (bool, error)
 	CheckThread(slug string) (bool, error)
+	CheckPost(id int) (bool, error)
 	GetThread(slug string) (models.Thread, error)
+	GetThreadById(id int) (models.Thread, int)
+	GetPost(id int) (models.Post, int)
+	GetUser(name string) (models.User, int)
 	AddNewThread(newThread models.Thread) (uint64, error)
 	GetForumUsers(slug string, limit int, since string, desc bool) (models.Users, error)
+	AddForumUsers(slug string, author string) error
+	GetForumThreads(slug string, limit int, since string, desc bool) (models.Threads, error)
 }

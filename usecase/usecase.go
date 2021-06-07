@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"net/http"
+	"strings"
 	smth "subd"
 	"subd/constants"
 	"subd/models"
@@ -13,6 +14,27 @@ type Smth struct {
 
 func NewSmth(e smth.Repository) smth.UseCase {
 	return &Smth{repo: e}
+}
+
+func (s Smth) GetThreads(slug string, limit int, since string, desc bool) (models.Threads, int) {
+	isExisted, err := s.repo.CheckForum(slug)
+	if err != nil {
+		return models.Threads{}, http.StatusInternalServerError
+	}
+	if !isExisted {
+		return models.Threads{}, constants.NotFound
+	}
+
+	if since == "" {
+		since = "0001-01-01 00:00:00.000000"
+	}
+
+	threads, err := s.repo.GetForumThreads(slug, limit, since, desc)
+	if err != nil {
+		return models.Threads{}, http.StatusInternalServerError
+	}
+
+	return threads, http.StatusOK
 }
 
 func (s Smth) GetForumUsers(slug string, limit int, since string, desc bool) (models.Users, int) {
@@ -66,6 +88,8 @@ func (s Smth) CreateNewThread(newThread *models.Thread) (models.Thread, int) {
 		return models.Thread{}, http.StatusInternalServerError
 	}
 
+	s.repo.AddForumUsers(newThread.Forum, newThread.Author)
+
 	return *newThread, http.StatusCreated
 }
 
@@ -94,6 +118,7 @@ func (s Smth) CreateNewForum(newForum *models.Forum) (models.Forum, int) {
 	if err != nil {
 		return models.Forum{}, http.StatusInternalServerError
 	}
+	s.repo.AddForumUsers(newForum.Slug, newForum.Owner)
 
 	return *newForum, http.StatusCreated
 }
@@ -102,6 +127,43 @@ func (s Smth) GetForum(slug string) (models.Forum, int) {
 	forum, status := s.repo.GetForum(slug)
 
 	return forum, status
+}
+
+func (s Smth) GetPost(id int, related string) (models.FullPost, int) {
+	fullPost := models.FullPost{}
+	var err error
+
+	isExisted, err := s.repo.CheckPost(id)
+	if err != nil {
+		return models.FullPost{}, http.StatusInternalServerError
+	}
+	if !isExisted {
+		return models.FullPost{}, constants.NotFound
+	}
+
+	post, _ := s.repo.GetPost(id)
+	fullPost.Post = &post
+
+	if related != "" {
+		split := strings.Split(related, ",")
+
+		for _, elem := range split {
+			switch elem {
+			case "user":
+				user, _ := s.repo.GetUser(fullPost.Post.Author)
+				fullPost.Author = &user
+			case "thread":
+				thread, _ := s.repo.GetThreadById(fullPost.Post.Thread)
+				fullPost.Thread = &thread
+			case "forum":
+				forum, _ := s.repo.GetForum(fullPost.Post.Forum)
+				fullPost.Forum = &forum
+			}
+		}
+	}
+
+	return fullPost, http.StatusOK
+
 }
 
 /*func (e Event) GetNear(coord models.Coordinates, page int) (models.EventCardsWithCoords, error) {

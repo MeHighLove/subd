@@ -67,6 +67,22 @@ func (sd SomeDatabase) CheckUser(user string) (bool, error) {
 	return true, nil
 }
 
+func (sd SomeDatabase) CheckPost(id int) (bool, error) {
+	var ids []uint64
+	err := pgxscan.Select(context.Background(), sd.pool, &ids,
+		`SELECT 1 FROM posts
+	WHERE id = $1 LIMIT 1`, id)
+
+	if errors.As(err, &pgx.ErrNoRows) || len(ids) == 0 {
+		return false, nil
+	}
+
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 func (sd SomeDatabase) AddNewForum(newForum *models.Forum) (error, bool) {
 	resp, err := sd.pool.Exec(context.Background(),
 		`INSERT INTO forums 
@@ -108,6 +124,54 @@ func (sd SomeDatabase) GetForum(slug string) (models.Forum, int) {
 	}
 
 	return forum[0], http.StatusOK
+}
+
+func (sd SomeDatabase) GetPost(id int) (models.Post, int) {
+	var post []models.Post
+	err := pgxscan.Select(context.Background(), sd.pool, &post,
+		`SELECT * FROM posts WHERE id = $1`, id)
+
+	if errors.As(err, &pgx.ErrNoRows) || len(post) == 0 {
+		return models.Post{}, http.StatusNotFound
+	}
+
+	if err != nil {
+		return models.Post{}, http.StatusInternalServerError
+	}
+
+	return post[0], http.StatusOK
+}
+
+func (sd SomeDatabase) GetUser(name string) (models.User, int) {
+	var user []models.User
+	err := pgxscan.Select(context.Background(), sd.pool, &user,
+		`SELECT nickname, fullname, about, email FROM users WHERE nickname = $1`, name)
+
+	if errors.As(err, &pgx.ErrNoRows) || len(user) == 0 {
+		return models.User{}, http.StatusNotFound
+	}
+
+	if err != nil {
+		return models.User{}, http.StatusInternalServerError
+	}
+
+	return user[0], http.StatusOK
+}
+
+func (sd SomeDatabase) GetThreadById(id int) (models.Thread, int) {
+	var thread []models.Thread
+	err := pgxscan.Select(context.Background(), sd.pool, &thread,
+		`SELECT * FROM threads WHERE id = $1`, id)
+
+	if errors.As(err, &pgx.ErrNoRows) || len(thread) == 0 {
+		return models.Thread{}, http.StatusNotFound
+	}
+
+	if err != nil {
+		return models.Thread{}, http.StatusInternalServerError
+	}
+
+	return thread[0], http.StatusOK
 }
 
 //мб здесь падает, потому что нет перехода от даты к строке у поля created
@@ -165,6 +229,41 @@ func (sd SomeDatabase) GetForumUsers(slug string, limit int, since string, desc 
 	}
 
 	return users, nil
+}
+
+func (sd SomeDatabase) AddForumUsers(slug string, author string) error {
+	_, err := sd.pool.Exec(context.Background(),
+		`INSERT INTO forum_users 
+		VALUES ($1, $2)`,
+		slug, author)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (sd SomeDatabase) GetForumThreads(slug string, limit int, since string, desc bool) (models.Threads, error) {
+	var threads models.Threads
+	var err error
+	if desc == true {
+		err = pgxscan.Select(context.Background(), sd.pool, &threads,
+			`select * from threads where forum = $1 AND created > $2
+				order by created DESC LIMIT $3`, slug, since, limit)
+	} else {
+		err = pgxscan.Select(context.Background(), sd.pool, &threads,
+			`select * from threads where forum = $1 AND created > $2
+				order by created LIMIT $3`, slug, since, limit)
+	}
+	if errors.As(err, &pgx.ErrNoRows) || len(threads) == 0 {
+		return models.Threads{}, nil
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return threads, nil
 }
 
 
