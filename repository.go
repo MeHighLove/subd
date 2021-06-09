@@ -46,4 +46,7 @@ type Repository interface {
 	AddPost(post models.Post) (models.Post, error)
 	UpdateThread(slugOrId string, thread models.Thread) (models.Thread, error)
 	UpdateThreadById(id int, thread models.Thread) (models.Thread, error)
+	CheckVote(slug string, nickname string) (bool, error)
+	AddVote(slug string, vote models.Vote) error
+	UpdateVote(slug string, vote models.Vote) error
 }

@@ -34,7 +34,7 @@ func CreateSmthHandler(e *echo.Echo, uc smth.UseCase) {
 	e.GET("/api/thread/:slug_or_id/details", handler.GetThreadDetails)
 	e.POST("/api/thread/:slug_or_id/details", handler.UpdateThread)
 	//e.GET("/api/thread/:slug_or_id/posts", handler.GetThreadSort)
-	//e.POST("/api/thread/:slug_or_id/vote", handler.Vote)
+	e.POST("/api/thread/:slug_or_id/vote", handler.Vote)
 	e.POST("/api/user/:nickname/create", handler.CreateUser)
 	e.GET("/api/user/:nickname/profile", handler.GetUser)
 	e.POST("/api/user/:nickname/profile", handler.UpdateUser)
@@ -51,6 +51,32 @@ func CreateSmthHandler(e *echo.Echo, uc smth.UseCase) {
 	e.POST("/api/v1/save/:id", eventHandler.Save, middleware.GetId)
 	e.GET("api/v1/event/:id/image", eventHandler.GetImage, middleware.GetId)
 	e.GET("/api/v1/recommend", eventHandler.Recommend, middleware.GetPage, auth.GetSession)*/
+}
+
+func (sd SmthHandler) Vote(c echo.Context) error {
+	defer c.Request().Body.Close()
+
+	slugOrId := c.Param("slugOrId")
+
+	vote := &models.Vote{}
+
+	if err := easyjson.UnmarshalFromReader(c.Request().Body, vote); err != nil {
+		return echo.NewHTTPError(http.StatusTeapot, err.Error())
+	}
+
+	thread, status := sd.UseCase.Vote(slugOrId, *vote)
+
+	c.Response().Status = status
+
+	if status == constants.NotFound {
+		return echo.NewHTTPError(http.StatusNotFound, "Can't find thread with slug " + slugOrId)
+	}
+
+	if _, err := easyjson.MarshalToWriter(thread, c.Response().Writer); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	return nil
 }
 
 func (sd SmthHandler) UpdateThread(c echo.Context) error {

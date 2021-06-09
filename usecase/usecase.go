@@ -373,6 +373,84 @@ func (s Smth) UpdateThread(slugOrId string, newThread models.Thread) (models.Thr
 	return thread, http.StatusOK
 }
 
+//Еще раз разобраться
+func (s Smth) Vote(slugOrId string, vote models.Vote) (models.Thread, int) {
+	var thread models.Thread
+	isExist, err := s.repo.CheckUser(vote.Nickname)
+	if err != nil {
+		return models.Thread{}, http.StatusInternalServerError
+	}
+	if !isExist {
+		return models.Thread{}, http.StatusNotFound
+	}
+	if id, err := strconv.Atoi(slugOrId); err != nil {
+		isExist, err := s.repo.CheckThread(slugOrId)
+		if err != nil {
+			return models.Thread{}, http.StatusInternalServerError
+		}
+		if !isExist {
+			return models.Thread{}, http.StatusNotFound
+		}
+		isExist, err = s.repo.CheckVote(slugOrId, vote.Nickname)
+		if err != nil {
+			return models.Thread{}, http.StatusInternalServerError
+		}
+		if !isExist {
+			err = s.repo.AddVote(slugOrId, vote)
+			if err != nil {
+				return models.Thread{}, http.StatusInternalServerError
+			}
+			err = s.repo.UpdateVote(slugOrId, vote)
+			if err != nil {
+				return models.Thread{}, http.StatusInternalServerError
+			}
+		} else {
+			num, err := s.repo.GetValueVote(slugOrId, vote.Nickname)
+			if err != nil {
+				return models.Thread{}, http.StatusInternalServerError
+			}
+			vote.Voice -= num
+			err = s.repo.UpdateVote(slugOrId, vote)
+			if err != nil {
+				return models.Thread{}, http.StatusInternalServerError
+			}
+			thread, _ = s.repo.GetThread(slugOrId)
+		}
+	} else {
+		thread, status := s.repo.GetThreadById(id)
+		if status == constants.NotFound {
+			return models.Thread{}, http.StatusNotFound
+		}
+		isExist, err = s.repo.CheckVote(thread.Slug, vote.Nickname)
+		if err != nil {
+			return models.Thread{}, http.StatusInternalServerError
+		}
+		if !isExist {
+			err = s.repo.AddVote(thread.Slug, vote)
+			if err != nil {
+				return models.Thread{}, http.StatusInternalServerError
+			}
+			err = s.repo.UpdateVote(thread.Slug, vote.Voice)
+			if err != nil {
+				return models.Thread{}, http.StatusInternalServerError
+			}
+			thread.Votes += vote.Voice
+		} else {
+			num, err := s.repo.GetValueVote(thread.Slug, vote.Nickname)
+			if err != nil {
+				return models.Thread{}, http.StatusInternalServerError
+			}
+			err = s.repo.UpdateVote(thread.Slug, vote.Voice - num)
+			if err != nil {
+				return models.Thread{}, http.StatusInternalServerError
+			}
+			thread.Votes += vote.Voice - num
+		}
+	}
+
+	return thread, http.StatusOK
+}
+
 /*func (e Event) GetNear(coord models.Coordinates, page int) (models.EventCardsWithCoords, error) {
 	sqlEvents, err := e.repo.GetNearEvents(time.Now(), coord, page)
 	if err != nil {

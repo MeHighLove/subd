@@ -2,6 +2,11 @@ package models
 
 import "github.com/go-openapi/strfmt"
 
+type Vote struct {
+	Nickname string `json:"nickname"`
+	Voice int `json:"voice"`
+}
+
 type Forum struct {
 	Title string `json:"title"`
 	Owner string `json:"user"`

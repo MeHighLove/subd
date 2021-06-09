@@ -131,6 +131,22 @@ func (sd SomeDatabase) CheckPost(id int) (bool, error) {
 	return true, nil
 }
 
+func (sd SomeDatabase) CheckVote(slug string, nickname string) (bool, error) {
+	var ids []uint64
+	err := pgxscan.Select(context.Background(), sd.pool, &ids,
+		`SELECT 1 FROM votes
+	WHERE thread = $1 AND nickname = $2 LIMIT 1`, slug, nickname)
+
+	if errors.As(err, &pgx.ErrNoRows) || len(ids) == 0 {
+		return false, nil
+	}
+
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 func (sd SomeDatabase) AddNewForum(newForum *models.Forum) (error, bool) {
 	resp, err := sd.pool.Exec(context.Background(),
 		`INSERT INTO forums 
@@ -144,6 +160,18 @@ func (sd SomeDatabase) AddNewForum(newForum *models.Forum) (error, bool) {
 	}
 
 	return nil, false
+}
+
+func (sd SomeDatabase) AddVote(slug string, vote models.Vote) error {
+	_, err := sd.pool.Exec(context.Background(),
+		`INSERT INTO votes 
+		VALUES ($1, $2, $3)`,
+		slug, vote.Voice, vote.Nickname)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (sd SomeDatabase) GetForumCounts(slug string) (uint64, uint64, error) {

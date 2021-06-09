@@ -34,4 +34,5 @@ type UseCase interface {
 	CreateNewPosts(newPosts models.Posts, slugOrId string) (models.Posts, int)
 	GetThread(slugOrId string) (models.Thread, int)
 	UpdateThread(slugOrId string, newThread models.Thread) (models.Thread, int)
+	Vote(slugOrId string, vote models.Vote) (models.Thread, int)
 }
