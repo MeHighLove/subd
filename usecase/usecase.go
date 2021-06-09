@@ -37,6 +37,16 @@ func (s Smth) GetThreads(slug string, limit int, since string, desc bool) (model
 	return threads, http.StatusOK
 }
 
+func (s Smth) GetUser(nickname string) (models.User, int) {
+	user, status := s.repo.GetUser(nickname)
+
+	if status == http.StatusNotFound {
+		return models.User{}, constants.NotFound
+	}
+
+	return user, http.StatusOK
+}
+
 func (s Smth) GetForumUsers(slug string, limit int, since string, desc bool) (models.Users, int) {
 	isExisted, err := s.repo.CheckForum(slug)
 	if err != nil {
@@ -87,6 +97,7 @@ func (s Smth) CreateNewThread(newThread *models.Thread) (models.Thread, int) {
 	if err != nil {
 		return models.Thread{}, http.StatusInternalServerError
 	}
+	err = s.repo.IncrementThreads(newThread.Forum)
 
 	s.repo.AddForumUsers(newThread.Forum, newThread.Author)
 
@@ -201,6 +212,61 @@ func (s Smth) Status() (models.Status, error) {
 	}
 
 	return status, nil
+}
+
+func (s Smth) CreateUser(nickname string, user models.User) (models.Users, int) {
+	isExist, err := s.repo.CheckUserByNicknameOrEmail(nickname, user.Email.String())
+	if err != nil {
+		return models.Users{}, http.StatusInternalServerError
+	}
+
+	var users models.Users
+
+	if isExist {
+		users, err = s.repo.GetUserByNicknameOrEmail(nickname, user.Email.String())
+		if err != nil {
+			return models.Users{}, http.StatusInternalServerError
+		}
+		return users, http.StatusConflict
+	}
+
+
+	err = s.repo.CreateUser(nickname, user)
+	if err != nil {
+		return models.Users{}, http.StatusInternalServerError
+	}
+
+	newUser, _ := s.repo.GetUser(nickname)
+	users = append(users, newUser)
+
+	return users, http.StatusOK
+}
+
+func (s Smth) UpdateUser(nickname string, user models.User) (models.User, int) {
+	isExist, err := s.repo.CheckUser(nickname)
+	if err != nil {
+		return models.User{}, http.StatusInternalServerError
+	}
+	if !isExist {
+		return models.User{}, http.StatusNotFound
+	}
+
+	isExist, err = s.repo.CheckUserByEmail(user.Email.String())
+	if err != nil {
+		return models.User{}, http.StatusInternalServerError
+	}
+	if isExist {
+		return models.User{}, http.StatusConflict
+	}
+
+	err = s.repo.UpdateUser(nickname, user)
+	if err != nil {
+		return models.User{}, http.StatusInternalServerError
+	}
+
+	newUser, _ := s.repo.GetUser(nickname)
+
+	return newUser, http.StatusOK
 }
 
 /*func (e Event) GetNear(coord models.Coordinates, page int) (models.EventCardsWithCoords, error) {

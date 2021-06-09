@@ -15,7 +15,8 @@ type SmthHandler struct {
 	UseCase   smth.UseCase
 }
 
-//TODO Разобраться с чеками(они все не нужны)
+//TODO Разобраться с чеками(они все не нужны). Передавать можно все по ссылке. Поправить все ответы об ошибках(сделать message:...)
+//TODO Инкрементить на 1 треды при их создании(в бд прям функцию)
 func CreateSmthHandler(e *echo.Echo, uc smth.UseCase) {
 	handler := SmthHandler{UseCase: uc}
 
@@ -29,6 +30,14 @@ func CreateSmthHandler(e *echo.Echo, uc smth.UseCase) {
 	e.POST("/api/post/:id/details", handler.EditMessage)
 	e.GET("/api/service/clear", handler.Clear)
 	e.GET("/api/service/status", handler.Status)
+	//e.POST("/api/thread/:slug_or_id/create", handler.CreateThread)
+	//e.GET("/api/thread/:slug_or_id/details", handler.GetThreadDetails)
+	//e.POST("/api/thread/:slug_or_id/details", handler.UpdateThread)
+	//e.GET("/api/thread/:slug_or_id/posts", handler.GetThreadSort)
+	//e.POST("/api/thread/:slug_or_id/vote", handler.Vote)
+	e.POST("/api/user/:nickname/create", handler.CreateUser)
+	e.GET("/api/user/:nickname/profile", handler.GetUser)
+	e.POST("/api/user/:nickname/profile", handler.UpdateUser)
 	/*e.GET("/api/v1/", eventHandler.GetAllEvents, middleware.GetPage)
 	e.GET("/api/v1/event/:id", eventHandler.GetOneEvent, middleware.GetId)
 	e.GET("/link/event/:id", eventHandler.GetEventLink, middleware.GetId)
@@ -42,6 +51,83 @@ func CreateSmthHandler(e *echo.Echo, uc smth.UseCase) {
 	e.POST("/api/v1/save/:id", eventHandler.Save, middleware.GetId)
 	e.GET("api/v1/event/:id/image", eventHandler.GetImage, middleware.GetId)
 	e.GET("/api/v1/recommend", eventHandler.Recommend, middleware.GetPage, auth.GetSession)*/
+}
+
+func (sd SmthHandler) UpdateUser(c echo.Context) error {
+	defer c.Request().Body.Close()
+
+	nickname := c.Param("nickname")
+
+	newUser := &models.User{}
+
+	if err := easyjson.UnmarshalFromReader(c.Request().Body, newUser); err != nil {
+		return echo.NewHTTPError(http.StatusTeapot, err.Error())
+	}
+
+	user, status := sd.UseCase.UpdateUser(nickname, *newUser)
+
+	c.Response().Status = status
+
+	if status == http.StatusConflict {
+		return echo.NewHTTPError(http.StatusConflict, "Can't find user with nickname " + nickname)
+	}
+	if status == constants.NotFound {
+		return echo.NewHTTPError(http.StatusNotFound, "Can't find user with nickname " + nickname)
+	}
+
+	if _, err := easyjson.MarshalToWriter(user, c.Response().Writer); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	return nil
+}
+
+func (sd SmthHandler) GetUser(c echo.Context) error {
+	defer c.Request().Body.Close()
+
+	nickname := c.Param("nickname")
+
+	user, status := sd.UseCase.GetUser(nickname)
+
+	c.Response().Status = status
+
+	if status == constants.NotFound {
+		return echo.NewHTTPError(http.StatusNotFound, "Can't find user with nickname " + nickname)
+	}
+
+	if _, err := easyjson.MarshalToWriter(user, c.Response().Writer); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	return nil
+}
+
+func (sd SmthHandler) CreateUser(c echo.Context) error {
+	defer c.Request().Body.Close()
+
+	nickname := c.Param("nickname")
+
+	newUser := &models.User{}
+
+	if err := easyjson.UnmarshalFromReader(c.Request().Body, newUser); err != nil {
+		return echo.NewHTTPError(http.StatusTeapot, err.Error())
+	}
+
+	users, status := sd.UseCase.CreateUser(nickname, *newUser)
+
+	c.Response().Status = status
+
+	if status == http.StatusConflict {
+		if _, err := easyjson.MarshalToWriter(users, c.Response().Writer); err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
+	}
+
+	if _, err := easyjson.MarshalToWriter(users[0], c.Response().Writer); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	return nil
 }
 
 func (sd SmthHandler) Status(c echo.Context) error {

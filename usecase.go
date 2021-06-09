@@ -28,4 +28,7 @@ type UseCase interface {
 	EditMessage(id int, message string) (models.Post, int)
 	Clear() error
 	Status() (models.Status, error)
+	CreateUser(nickname string, user models.User) (models.Users, int)
+	GetUser(nickname string) (models.User, int)
+	UpdateUser(nickname string, user models.User) (models.User, int)
 }

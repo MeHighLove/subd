@@ -67,6 +67,38 @@ func (sd SomeDatabase) CheckUser(user string) (bool, error) {
 	return true, nil
 }
 
+func (sd SomeDatabase) CheckUserByEmail(email string) (bool, error) {
+	var id []uint64
+	err := pgxscan.Select(context.Background(), sd.pool, &id,
+		`SELECT 1 FROM users
+	WHERE email = $1 LIMIT 1`, email)
+
+	if errors.As(err, &pgx.ErrNoRows) || len(id) == 0 {
+		return false, nil
+	}
+
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func (sd SomeDatabase) CheckUserByNicknameOrEmail(nickname string, email string) (bool, error) {
+	var id []uint64
+	err := pgxscan.Select(context.Background(), sd.pool, &id,
+		`SELECT 1 FROM users
+	WHERE nickname = $1 OR email = $2 LIMIT 1`, nickname, email)
+
+	if errors.As(err, &pgx.ErrNoRows) || len(id) == 0 {
+		return false, nil
+	}
+
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 func (sd SomeDatabase) CheckPost(id int) (bool, error) {
 	var ids []uint64
 	err := pgxscan.Select(context.Background(), sd.pool, &ids,
@@ -277,6 +309,17 @@ func (sd SomeDatabase) EditMessage(id int, message string) error {
 	return nil
 }
 
+func (sd SomeDatabase) IncrementThreads(forum string) error {
+	_, err := sd.pool.Exec(context.Background(),
+		`UPDATE forums SET threads = threads + 1 WHERE slug = $1`, forum)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (sd SomeDatabase) Clear() error {
 	_, err := sd.pool.Exec(context.Background(),
 		`TRUNCATE users, forums, threads, posts, votes, forum_users`)
@@ -301,6 +344,45 @@ func (sd SomeDatabase) Status() (models.Status, error) {
 	}
 
 	return status, nil
+}
+
+func (sd SomeDatabase) CreateUser(nickname string, user models.User) error {
+	_, err := sd.pool.Exec(context.Background(),
+		`INSERT INTO users VALUES(default, $1, $2, $3, $4)`, nickname, user.Fullname, user.About, user.Email)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (sd SomeDatabase) UpdateUser(nickname string, user models.User) error {
+	_, err := sd.pool.Exec(context.Background(),
+		`UPDATE users SET fullname = $1, about = $2, email = $3 WHERE nickname = $4`,
+		user.Fullname, user.About, user.Email, nickname)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (sd SomeDatabase) GetUserByNicknameOrEmail(nickname string, email string) (models.Users, error) {
+	var users models.Users
+	err := pgxscan.Select(context.Background(), sd.pool, &users,
+		`SELECT nickname, fullname, about, email FROM users WHERE nickname = $1 OR email = $2`, nickname, email)
+
+	if errors.As(err, &pgx.ErrNoRows) || len(users) == 0 {
+		return models.Users{}, nil
+	}
+
+	if err != nil {
+		return models.Users{}, err
+	}
+
+	return users, nil
 }
 
 
