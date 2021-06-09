@@ -30,9 +30,9 @@ func CreateSmthHandler(e *echo.Echo, uc smth.UseCase) {
 	e.POST("/api/post/:id/details", handler.EditMessage)
 	e.GET("/api/service/clear", handler.Clear)
 	e.GET("/api/service/status", handler.Status)
-	//e.POST("/api/thread/:slug_or_id/create", handler.CreateThread)
-	//e.GET("/api/thread/:slug_or_id/details", handler.GetThreadDetails)
-	//e.POST("/api/thread/:slug_or_id/details", handler.UpdateThread)
+	e.POST("/api/thread/:slug_or_id/create", handler.CreatePosts)
+	e.GET("/api/thread/:slug_or_id/details", handler.GetThreadDetails)
+	e.POST("/api/thread/:slug_or_id/details", handler.UpdateThread)
 	//e.GET("/api/thread/:slug_or_id/posts", handler.GetThreadSort)
 	//e.POST("/api/thread/:slug_or_id/vote", handler.Vote)
 	e.POST("/api/user/:nickname/create", handler.CreateUser)
@@ -51,6 +51,35 @@ func CreateSmthHandler(e *echo.Echo, uc smth.UseCase) {
 	e.POST("/api/v1/save/:id", eventHandler.Save, middleware.GetId)
 	e.GET("api/v1/event/:id/image", eventHandler.GetImage, middleware.GetId)
 	e.GET("/api/v1/recommend", eventHandler.Recommend, middleware.GetPage, auth.GetSession)*/
+}
+
+func (sd SmthHandler) UpdateThread(c echo.Context) error {
+	defer c.Request().Body.Close()
+
+	slugOrId := c.Param("slugOrId")
+
+	newThread := &models.Thread{}
+
+	if err := easyjson.UnmarshalFromReader(c.Request().Body, newThread); err != nil {
+		return echo.NewHTTPError(http.StatusTeapot, err.Error())
+	}
+
+	thread, status := sd.UseCase.UpdateThread(slugOrId, *newThread)
+
+	c.Response().Status = status
+
+	if status == http.StatusConflict {
+		return echo.NewHTTPError(http.StatusConflict, "Can't find thread with slug " + slugOrId)
+	}
+	if status == constants.NotFound {
+		return echo.NewHTTPError(http.StatusNotFound, "Can't find thread with slug " + slugOrId)
+	}
+
+	if _, err := easyjson.MarshalToWriter(thread, c.Response().Writer); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	return nil
 }
 
 func (sd SmthHandler) UpdateUser(c echo.Context) error {
@@ -176,6 +205,25 @@ func (sd SmthHandler) EditMessage(c echo.Context) error {
 	}
 
 	if _, err := easyjson.MarshalToWriter(post, c.Response().Writer); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	c.Response().Status = status
+
+	return nil
+}
+
+func (sd SmthHandler) GetThreadDetails(c echo.Context) error {
+	defer c.Request().Body.Close()
+
+	slugOrId := c.Param("slug_or_id")
+
+	thread, status := sd.UseCase.GetThread(slugOrId)
+	if status == constants.NotFound {
+		return echo.NewHTTPError(http.StatusNotFound, "Can't find thread with id " + slugOrId)
+	}
+
+	if _, err := easyjson.MarshalToWriter(thread, c.Response().Writer); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
@@ -322,6 +370,34 @@ func (sd SmthHandler) CreateThread(c echo.Context) error {
 	}
 
 	if _, err := easyjson.MarshalToWriter(thread, c.Response().Writer); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	c.Response().Status = status
+
+	return nil
+}
+
+func (sd SmthHandler) CreatePosts(c echo.Context) error {
+	defer c.Request().Body.Close()
+
+	newPosts := &models.Posts{}
+
+	if err := easyjson.UnmarshalFromReader(c.Request().Body, newPosts); err != nil {
+		return echo.NewHTTPError(http.StatusTeapot, err.Error())
+	}
+
+	slugOrId := c.Param("slug_or_id")
+
+	posts, status := sd.UseCase.CreateNewPosts(*newPosts, slugOrId)
+	if status == constants.NotFound {
+		return echo.NewHTTPError(http.StatusNotFound, "Can't find user with name ")
+	}
+	if status == http.StatusConflict {
+		return echo.NewHTTPError(http.StatusConflict, "Can't find user with name ")
+	}
+
+	if _, err := easyjson.MarshalToWriter(posts, c.Response().Writer); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 

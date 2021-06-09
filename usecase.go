@@ -31,4 +31,7 @@ type UseCase interface {
 	CreateUser(nickname string, user models.User) (models.Users, int)
 	GetUser(nickname string) (models.User, int)
 	UpdateUser(nickname string, user models.User) (models.User, int)
+	CreateNewPosts(newPosts models.Posts, slugOrId string) (models.Posts, int)
+	GetThread(slugOrId string) (models.Thread, int)
+	UpdateThread(slugOrId string, newThread models.Thread) (models.Thread, int)
 }

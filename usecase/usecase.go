@@ -1,11 +1,14 @@
 package usecase
 
 import (
+	"github.com/go-openapi/strfmt"
 	"net/http"
+	"strconv"
 	"strings"
 	smth "subd"
 	"subd/constants"
 	"subd/models"
+	"time"
 )
 
 type Smth struct {
@@ -102,6 +105,79 @@ func (s Smth) CreateNewThread(newThread *models.Thread) (models.Thread, int) {
 	s.repo.AddForumUsers(newThread.Forum, newThread.Author)
 
 	return *newThread, http.StatusCreated
+}
+
+func (s Smth) GetThread(slugOrId string) (models.Thread, int) {
+	var thread models.Thread
+	var status int
+	if id, err := strconv.Atoi(slugOrId); err != nil {
+		isExist, err := s.repo.CheckThread(slugOrId)
+		if err != nil {
+			return models.Thread{}, http.StatusInternalServerError
+		}
+		if !isExist {
+			return models.Thread{}, http.StatusNotFound
+		}
+		thread, err = s.repo.GetThread(slugOrId)
+		if err != nil {
+			return models.Thread{}, http.StatusInternalServerError
+		}
+	} else {
+		thread, status = s.repo.GetThreadById(id)
+		if status == http.StatusNotFound {
+			return models.Thread{}, status
+		}
+		if status == http.StatusInternalServerError {
+			return models.Thread{}, http.StatusInternalServerError
+		}
+	}
+	return thread, http.StatusOK
+}
+
+func (s Smth) CreateNewPosts(newPosts models.Posts, slugOrId string) (models.Posts, int) {
+	var thread models.Thread
+	var status int
+	if id, err := strconv.Atoi(slugOrId); err != nil {
+		isExist, err := s.repo.CheckThread(slugOrId)
+		if err != nil {
+			return models.Posts{}, http.StatusInternalServerError
+		}
+		if !isExist {
+			return models.Posts{}, http.StatusNotFound
+		}
+		thread, err = s.repo.GetThread(slugOrId)
+		if err != nil {
+			return models.Posts{}, http.StatusInternalServerError
+		}
+	} else {
+		thread, status = s.repo.GetThreadById(id)
+		if status == http.StatusNotFound {
+			return models.Posts{}, status
+		}
+		if status == http.StatusInternalServerError {
+			return models.Posts{}, http.StatusInternalServerError
+		}
+	}
+
+	if len(newPosts) == 0 {
+		return models.Posts{}, http.StatusCreated
+	}
+
+	now := time.Now()
+
+	var err error
+	for i := range newPosts {
+		newPosts[i].Thread = int(thread.Id)
+		newPosts[i].Forum = thread.Forum
+		newPosts[i].Created = strfmt.DateTime(now)
+		newPosts[i], err = s.repo.AddPost(newPosts[i])
+		if err != nil {
+			return models.Posts{}, http.StatusConflict
+		}
+		err = s.repo.IncrementPosts(newPosts[i].Forum)
+	}
+
+	return newPosts, http.StatusCreated
 }
 
 //Здесь может быть ошибка, потому что отдаем данные не ранее созданного форума, а те, которые пришли на вход(пространство для + рпс смотри выше)
@@ -267,6 +343,34 @@ func (s Smth) UpdateUser(nickname string, user models.User) (models.User, int) {
 	newUser, _ := s.repo.GetUser(nickname)
 
 	return newUser, http.StatusOK
+}
+
+func (s Smth) UpdateThread(slugOrId string, newThread models.Thread) (models.Thread, int) {
+	var thread models.Thread
+	if id, err := strconv.Atoi(slugOrId); err != nil {
+		isExist, err := s.repo.CheckThread(slugOrId)
+		if err != nil {
+			return models.Thread{}, http.StatusInternalServerError
+		}
+		if !isExist {
+			return models.Thread{}, http.StatusNotFound
+		}
+		thread, err = s.repo.UpdateThread(slugOrId, newThread)
+		if err != nil {
+			return models.Thread{}, http.StatusInternalServerError
+		}
+	} else {
+		isExist, err := s.repo.CheckThreadById(id)
+		if err != nil {
+			return models.Thread{}, http.StatusInternalServerError
+		}
+		if !isExist {
+			return models.Thread{}, http.StatusNotFound
+		}
+		thread, err = s.repo.UpdateThreadById(id, newThread)
+	}
+
+	return thread, http.StatusOK
 }
 
 /*func (e Event) GetNear(coord models.Coordinates, page int) (models.EventCardsWithCoords, error) {

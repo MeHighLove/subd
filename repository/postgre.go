@@ -35,6 +35,22 @@ func (sd SomeDatabase) CheckThread(slug string) (bool, error) {
 	return true, nil
 }
 
+func (sd SomeDatabase) CheckThreadById(id int) (bool, error) {
+	var ids []uint64
+	err := pgxscan.Select(context.Background(), sd.pool, &ids,
+		`SELECT 1 FROM threads
+	WHERE id = $1 LIMIT 1`, id)
+
+	if errors.As(err, &pgx.ErrNoRows) || len(ids) == 0 {
+		return false, nil
+	}
+
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 func (sd SomeDatabase) CheckForum(slug string) (bool, error) {
 	var id []uint64
 	err := pgxscan.Select(context.Background(), sd.pool, &id,
@@ -236,6 +252,17 @@ func (sd SomeDatabase) AddNewThread(newThread models.Thread) (uint64, error) {
 	return id, nil
 }
 
+func (sd SomeDatabase) AddPost(post models.Post) (models.Post, error) {
+	err := sd.pool.QueryRow(context.Background(),
+		`INSERT INTO posts VALUES (default, $1, $2, $3, default, $4, $5, $6) RETURNING id`,
+		post.Author, post.Created, post.Forum, post.Message, post.Parent, post.Thread).Scan(&post.Id)
+	if err != nil {
+		return models.Post{}, err
+	}
+
+	return post, nil
+}
+
 func (sd SomeDatabase) GetForumUsers(slug string, limit int, since string, desc bool) (models.Users, error) {
 	var users models.Users
 	var err error
@@ -309,9 +336,50 @@ func (sd SomeDatabase) EditMessage(id int, message string) error {
 	return nil
 }
 
+func (sd SomeDatabase) UpdateThread(slugOrId string, thread models.Thread) (models.Thread, error) {
+	err := sd.pool.QueryRow(context.Background(),
+		`UPDATE threads SET message = $1, title = $2 WHERE slug = $3
+			RETURNING threads.id, threads.author, threads.created, threads.forum,
+			threads.message, threads.slug, threads.title, threads.votes`, thread.Message,
+			thread.Title, slugOrId).Scan(&thread.Id, &thread.Author, &thread.Created,
+				&thread.Forum, &thread.Message, &thread.Slug, &thread.Title, &thread.Votes)
+
+	if err != nil {
+		return models.Thread{}, err
+	}
+
+	return thread, nil
+}
+
+func (sd SomeDatabase) UpdateThreadById(id int, thread models.Thread) (models.Thread, error) {
+	err := sd.pool.QueryRow(context.Background(),
+		`UPDATE threads SET message = $1, title = $2 WHERE slug = $3
+			RETURNING threads.id, threads.author, threads.created, threads.forum,
+			threads.message, threads.slug, threads.title, threads.votes`, thread.Message,
+		thread.Title, id).Scan(&thread.Id, &thread.Author, &thread.Created,
+		&thread.Forum, &thread.Message, &thread.Slug, &thread.Title, &thread.Votes)
+
+	if err != nil {
+		return models.Thread{}, err
+	}
+
+	return thread, nil
+}
+
 func (sd SomeDatabase) IncrementThreads(forum string) error {
 	_, err := sd.pool.Exec(context.Background(),
 		`UPDATE forums SET threads = threads + 1 WHERE slug = $1`, forum)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (sd SomeDatabase) IncrementPosts(forum string) error {
+	_, err := sd.pool.Exec(context.Background(),
+		`UPDATE forums SET posts = posts + 1 WHERE slug = $1`, forum)
 
 	if err != nil {
 		return err

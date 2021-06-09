@@ -451,7 +451,7 @@ func easyjsonD2b7633eDecodeSubdModels5(in *jlexer.Lexer, out *Posts) {
 		in.Delim('[')
 		if *out == nil {
 			if !in.IsDelim(']') {
-				*out = make(Posts, 0, 8)
+				*out = make(Posts, 0, 0)
 			} else {
 				*out = Posts{}
 			}
@@ -459,16 +459,8 @@ func easyjsonD2b7633eDecodeSubdModels5(in *jlexer.Lexer, out *Posts) {
 			*out = (*out)[:0]
 		}
 		for !in.IsDelim(']') {
-			var v7 *Post
-			if in.IsNull() {
-				in.Skip()
-				v7 = nil
-			} else {
-				if v7 == nil {
-					v7 = new(Post)
-				}
-				(*v7).UnmarshalEasyJSON(in)
-			}
+			var v7 Post
+			(v7).UnmarshalEasyJSON(in)
 			*out = append(*out, v7)
 			in.WantComma()
 		}
@@ -487,11 +479,7 @@ func easyjsonD2b7633eEncodeSubdModels5(out *jwriter.Writer, in Posts) {
 			if v8 > 0 {
 				out.RawByte(',')
 			}
-			if v9 == nil {
-				out.RawString("null")
-			} else {
-				(*v9).MarshalEasyJSON(out)
-			}
+			(v9).MarshalEasyJSON(out)
 		}
 		out.RawByte(']')
 	}

@@ -64,7 +64,7 @@ type Users []User
 type Threads []Thread
 
 //easyjson:json
-type Posts []*Post
+type Posts []Post
 
 /*import "time"
 

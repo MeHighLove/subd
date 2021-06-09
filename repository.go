@@ -25,6 +25,7 @@ type Repository interface {
 	GetForum(slug string) (models.Forum, int)
 	CheckForum(slug string) (bool, error)
 	CheckThread(slug string) (bool, error)
+	CheckThreadById(id int) (bool, error)
 	CheckPost(id int) (bool, error)
 	GetThread(slug string) (models.Thread, error)
 	GetThreadById(id int) (models.Thread, int)
@@ -41,4 +42,8 @@ type Repository interface {
 	GetUserByNicknameOrEmail(nickname string, email string) (models.Users, error)
 	UpdateUser(nickname string, user models.User) error
 	IncrementThreads(forum string) error
+	IncrementPosts(forum string) error
+	AddPost(post models.Post) (models.Post, error)
+	UpdateThread(slugOrId string, thread models.Thread) (models.Thread, error)
+	UpdateThreadById(id int, thread models.Thread) (models.Thread, error)
 }
