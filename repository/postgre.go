@@ -281,10 +281,18 @@ func (sd SomeDatabase) GetValueVote(slug string, nickname string) (int, error) {
 
 func (sd SomeDatabase) AddNewThread(newThread models.Thread) (uint64, error) {
 	var id uint64
-	err := sd.pool.QueryRow(context.Background(),
-		`INSERT INTO threads VALUES (default, $1, $2, $3, $4, $5, $6, default) RETURNING id`,
-		newThread.Author, newThread.Created, newThread.Forum, newThread.Message,
-		newThread.Slug, newThread.Title).Scan(&id)
+	var err error
+	if newThread.Slug == ""{
+		err = sd.pool.QueryRow(context.Background(),
+			`INSERT INTO threads VALUES (default, $1, $2, $3, $4, null, $5, default) RETURNING id`,
+			newThread.Author, newThread.Created, newThread.Forum, newThread.Message,
+			newThread.Title).Scan(&id)
+	} else {
+		err = sd.pool.QueryRow(context.Background(),
+			`INSERT INTO threads VALUES (default, $1, $2, $3, $4, $5, $6, default) RETURNING id`,
+			newThread.Author, newThread.Created, newThread.Forum, newThread.Message,
+			newThread.Slug, newThread.Title).Scan(&id)
+	}
 	if err != nil {
 		return 0, err
 	}
@@ -533,14 +541,26 @@ func (sd SomeDatabase) AddForumUsers(slug string, author string) error {
 func (sd SomeDatabase) GetForumThreads(slug string, limit int, since string, desc bool) (models.Threads, error) {
 	var threads models.Threads
 	var err error
-	if desc == true {
-		err = pgxscan.Select(context.Background(), sd.pool, &threads,
-			`select * from threads where forum = $1 AND created > $2
-				order by created DESC LIMIT $3`, slug, since, limit)
+	if since == "" {
+		if desc == true {
+			err = pgxscan.Select(context.Background(), sd.pool, &threads,
+				`select * from threads where forum = $1
+				order by created DESC LIMIT $2`, slug, limit)
+		} else {
+			err = pgxscan.Select(context.Background(), sd.pool, &threads,
+				`select * from threads where forum = $1
+				order by created LIMIT $2`, slug, limit)
+		}
 	} else {
-		err = pgxscan.Select(context.Background(), sd.pool, &threads,
-			`select * from threads where forum = $1 AND created > $2
+		if desc == true {
+			err = pgxscan.Select(context.Background(), sd.pool, &threads,
+				`select * from threads where forum = $1 AND created <= $2
+				order by created DESC LIMIT $3`, slug, since, limit)
+		} else {
+			err = pgxscan.Select(context.Background(), sd.pool, &threads,
+				`select * from threads where forum = $1 AND created >= $2
 				order by created LIMIT $3`, slug, since, limit)
+		}
 	}
 	if errors.As(err, &pgx.ErrNoRows) || len(threads) == 0 {
 		return models.Threads{}, nil

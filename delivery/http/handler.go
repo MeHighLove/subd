@@ -22,10 +22,10 @@ func CreateSmthHandler(e *echo.Echo, uc smth.UseCase) {
 
 
 	e.POST("/api/forum/create", handler.CreateForum)
-	e.GET("/api/:slug/details", handler.ForumDetails)
-	e.POST("/api/:slug/create", handler.CreateThread)
-	e.GET("api/:slug/users", handler.GetForumUsers)
-	e.GET("/api/:slug/threads", handler.GetThreads)
+	e.GET("/api/forum/:slug/details", handler.ForumDetails)
+	e.POST("/api/forum/:slug/create", handler.CreateThread)
+	e.GET("api/forum/:slug/users", handler.GetForumUsers)
+	e.GET("/api/forum/:slug/threads", handler.GetThreads)
 	e.GET("/api/post/:id/details", handler.GetPostDetails)
 	e.POST("/api/post/:id/details", handler.EditMessage)
 	e.GET("/api/service/clear", handler.Clear)
