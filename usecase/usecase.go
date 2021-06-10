@@ -373,7 +373,6 @@ func (s Smth) UpdateThread(slugOrId string, newThread models.Thread) (models.Thr
 	return thread, http.StatusOK
 }
 
-//Еще раз разобраться
 func (s Smth) Vote(slugOrId string, vote models.Vote) (models.Thread, int) {
 	var thread models.Thread
 	isExist, err := s.repo.CheckUser(vote.Nickname)
@@ -400,19 +399,16 @@ func (s Smth) Vote(slugOrId string, vote models.Vote) (models.Thread, int) {
 			if err != nil {
 				return models.Thread{}, http.StatusInternalServerError
 			}
-			err = s.repo.UpdateVote(slugOrId, vote)
-			if err != nil {
-				return models.Thread{}, http.StatusInternalServerError
-			}
 		} else {
 			num, err := s.repo.GetValueVote(slugOrId, vote.Nickname)
 			if err != nil {
 				return models.Thread{}, http.StatusInternalServerError
 			}
-			vote.Voice -= num
-			err = s.repo.UpdateVote(slugOrId, vote)
-			if err != nil {
-				return models.Thread{}, http.StatusInternalServerError
+			if num != vote.Voice {
+				err = s.repo.UpdateVote(slugOrId, vote)
+				if err != nil {
+					return models.Thread{}, http.StatusInternalServerError
+				}
 			}
 			thread, _ = s.repo.GetThread(slugOrId)
 		}
@@ -430,25 +426,162 @@ func (s Smth) Vote(slugOrId string, vote models.Vote) (models.Thread, int) {
 			if err != nil {
 				return models.Thread{}, http.StatusInternalServerError
 			}
-			err = s.repo.UpdateVote(thread.Slug, vote.Voice)
-			if err != nil {
-				return models.Thread{}, http.StatusInternalServerError
-			}
-			thread.Votes += vote.Voice
 		} else {
 			num, err := s.repo.GetValueVote(thread.Slug, vote.Nickname)
 			if err != nil {
 				return models.Thread{}, http.StatusInternalServerError
 			}
-			err = s.repo.UpdateVote(thread.Slug, vote.Voice - num)
-			if err != nil {
-				return models.Thread{}, http.StatusInternalServerError
+			if num != vote.Voice {
+				err = s.repo.UpdateVote(slugOrId, vote)
+				if err != nil {
+					return models.Thread{}, http.StatusInternalServerError
+				}
+				thread.Votes += 2 * vote.Voice
 			}
-			thread.Votes += vote.Voice - num
 		}
 	}
 
 	return thread, http.StatusOK
+}
+
+func (s Smth) GetThreadSortFlat(slugOrId string, limit int, since int, desc bool) (models.Posts, int) {
+	var thread models.Thread
+	var status int
+	if id, err := strconv.Atoi(slugOrId); err != nil {
+		isExist, err := s.repo.CheckThread(slugOrId)
+		if err != nil {
+			return models.Posts{}, http.StatusInternalServerError
+		}
+		if !isExist {
+			return models.Posts{}, http.StatusNotFound
+		}
+		thread, err = s.repo.GetThread(slugOrId)
+		if err != nil {
+			return models.Posts{}, http.StatusInternalServerError
+		}
+	} else {
+		thread, status = s.repo.GetThreadById(id)
+		if status == constants.NotFound {
+			return models.Posts{}, http.StatusNotFound
+		}
+	}
+	if desc == true {
+		posts, err := s.repo.GetPostsFlatDesc(int(thread.Id) ,limit, since)
+		if err != nil {
+			return models.Posts{}, http.StatusInternalServerError
+		}
+		return posts, http.StatusOK
+	} else {
+		posts, err := s.repo.GetPostsFlat(int(thread.Id) ,limit, since)
+		if err != nil {
+			return models.Posts{}, http.StatusInternalServerError
+		}
+		return posts, http.StatusOK
+	}
+}
+
+func (s Smth) GetThreadSortTree(slugOrId string, limit int, since int, desc bool) (models.Posts, int) {
+	var thread models.Thread
+	var status int
+	if id, err := strconv.Atoi(slugOrId); err != nil {
+		isExist, err := s.repo.CheckThread(slugOrId)
+		if err != nil {
+			return models.Posts{}, http.StatusInternalServerError
+		}
+		if !isExist {
+			return models.Posts{}, http.StatusNotFound
+		}
+		thread, err = s.repo.GetThread(slugOrId)
+		if err != nil {
+			return models.Posts{}, http.StatusInternalServerError
+		}
+	} else {
+		thread, status = s.repo.GetThreadById(id)
+		if status == constants.NotFound {
+			return models.Posts{}, http.StatusNotFound
+		}
+	}
+	if since != 0 {
+		if desc == true {
+			posts, err := s.repo.GetPostsTreeSinceDesc(int(thread.Id) ,limit, since)
+			if err != nil {
+				return models.Posts{}, http.StatusInternalServerError
+			}
+			return posts, http.StatusOK
+		} else {
+			posts, err := s.repo.GetPostsTreeSince(int(thread.Id) ,limit, since)
+			if err != nil {
+				return models.Posts{}, http.StatusInternalServerError
+			}
+			return posts, http.StatusOK
+		}
+	} else {
+		if desc == true {
+			posts, err := s.repo.GetPostsTreeDesc(int(thread.Id) ,limit)
+			if err != nil {
+				return models.Posts{}, http.StatusInternalServerError
+			}
+			return posts, http.StatusOK
+		} else {
+			posts, err := s.repo.GetPostsTree(int(thread.Id) ,limit)
+			if err != nil {
+				return models.Posts{}, http.StatusInternalServerError
+			}
+			return posts, http.StatusOK
+		}
+	}
+}
+
+func (s Smth) GetThreadSortParentTree(slugOrId string, limit int, since int, desc bool) (models.Posts, int) {
+	var thread models.Thread
+	var status int
+	if id, err := strconv.Atoi(slugOrId); err != nil {
+		isExist, err := s.repo.CheckThread(slugOrId)
+		if err != nil {
+			return models.Posts{}, http.StatusInternalServerError
+		}
+		if !isExist {
+			return models.Posts{}, http.StatusNotFound
+		}
+		thread, err = s.repo.GetThread(slugOrId)
+		if err != nil {
+			return models.Posts{}, http.StatusInternalServerError
+		}
+	} else {
+		thread, status = s.repo.GetThreadById(id)
+		if status == constants.NotFound {
+			return models.Posts{}, http.StatusNotFound
+		}
+	}
+	if since != 0 {
+		if desc == true {
+			posts, err := s.repo.GetPostsParentTreeSinceDesc(int(thread.Id) ,limit, since)
+			if err != nil {
+				return models.Posts{}, http.StatusInternalServerError
+			}
+			return posts, http.StatusOK
+		} else {
+			posts, err := s.repo.GetPostsParentTreeSince(int(thread.Id) ,limit, since)
+			if err != nil {
+				return models.Posts{}, http.StatusInternalServerError
+			}
+			return posts, http.StatusOK
+		}
+	} else {
+		if desc == true {
+			posts, err := s.repo.GetPostsParentTreeDesc(int(thread.Id) ,limit)
+			if err != nil {
+				return models.Posts{}, http.StatusInternalServerError
+			}
+			return posts, http.StatusOK
+		} else {
+			posts, err := s.repo.GetPostsParentTree(int(thread.Id) ,limit)
+			if err != nil {
+				return models.Posts{}, http.StatusInternalServerError
+			}
+			return posts, http.StatusOK
+		}
+	}
 }
 
 /*func (e Event) GetNear(coord models.Coordinates, page int) (models.EventCardsWithCoords, error) {

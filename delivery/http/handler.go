@@ -33,24 +33,72 @@ func CreateSmthHandler(e *echo.Echo, uc smth.UseCase) {
 	e.POST("/api/thread/:slug_or_id/create", handler.CreatePosts)
 	e.GET("/api/thread/:slug_or_id/details", handler.GetThreadDetails)
 	e.POST("/api/thread/:slug_or_id/details", handler.UpdateThread)
-	//e.GET("/api/thread/:slug_or_id/posts", handler.GetThreadSort)
+	e.GET("/api/thread/:slug_or_id/posts", handler.GetThreadSort)
 	e.POST("/api/thread/:slug_or_id/vote", handler.Vote)
 	e.POST("/api/user/:nickname/create", handler.CreateUser)
 	e.GET("/api/user/:nickname/profile", handler.GetUser)
 	e.POST("/api/user/:nickname/profile", handler.UpdateUser)
-	/*e.GET("/api/v1/", eventHandler.GetAllEvents, middleware.GetPage)
-	e.GET("/api/v1/event/:id", eventHandler.GetOneEvent, middleware.GetId)
-	e.GET("/link/event/:id", eventHandler.GetEventLink, middleware.GetId)
-	e.GET("/api/v1/event/name/:id", eventHandler.GetOneEventName, middleware.GetId)
-	e.POST("/api/v1/near", eventHandler.GetNear, middleware.GetPage)
-	e.GET("/api/v1/event", eventHandler.GetEvents, middleware.GetPage)
-	e.GET("/api/v1/search", eventHandler.FindEvents, middleware.GetPage)
-	//create & delete & save вообще не должно быть, пользователь НИКАК не может создавать и удалять что-либо, только админ работает с БД
-	e.POST("/api/v1/create", eventHandler.Create)
-	e.DELETE("/api/v1/event/:id", eventHandler.Delete, middleware.GetId)
-	e.POST("/api/v1/save/:id", eventHandler.Save, middleware.GetId)
-	e.GET("api/v1/event/:id/image", eventHandler.GetImage, middleware.GetId)
-	e.GET("/api/v1/recommend", eventHandler.Recommend, middleware.GetPage, auth.GetSession)*/
+}
+
+func (sd SmthHandler) GetThreadSort(c echo.Context) error {
+	defer c.Request().Body.Close()
+
+	slugOrId := c.Param("slugOrId")
+	limit, err := strconv.Atoi(c.QueryParam("limit"))
+	if err != nil || limit == 0 {
+		limit = 100
+	}
+	since, _ := strconv.Atoi(c.QueryParam("since"))
+	desc, err := strconv.ParseBool(c.QueryParam("desc"))
+	if err != nil {
+		desc = false
+	}
+	sort := c.QueryParam("sort")
+	if sort == "" {
+		sort = "flat"
+	}
+
+	var posts models.Posts
+	var status int
+	if sort == "tree" {
+		posts, status = sd.UseCase.GetThreadSortTree(slugOrId, limit, since, desc)
+		if status == constants.NotFound {
+			return echo.NewHTTPError(http.StatusNotFound, "Can't find post with id ")
+		}
+		if _, err := easyjson.MarshalToWriter(posts, c.Response().Writer); err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
+
+		c.Response().Status = status
+
+		return nil
+	}
+	if sort == "parent_tree" {
+		posts, status = sd.UseCase.GetThreadSortParentTree(slugOrId, limit, since, desc)
+		if status == constants.NotFound {
+			return echo.NewHTTPError(http.StatusNotFound, "Can't find post with id ")
+		}
+		if _, err := easyjson.MarshalToWriter(posts, c.Response().Writer); err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
+
+		c.Response().Status = status
+
+		return nil
+	}
+
+	posts, status = sd.UseCase.GetThreadSortFlat(slugOrId, limit, since, desc)
+	if status == constants.NotFound {
+		return echo.NewHTTPError(http.StatusNotFound, "Can't find post with id ")
+	}
+
+	if _, err := easyjson.MarshalToWriter(posts, c.Response().Writer); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	c.Response().Status = status
+
+	return nil
 }
 
 func (sd SmthHandler) Vote(c echo.Context) error {

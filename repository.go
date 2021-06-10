@@ -3,20 +3,6 @@ package event
 import "subd/models"
 
 type Repository interface {
-	/*AddEvent(newEvent *models.Event) error
-	GetAllEvents(now time.Time, page int) ([]models.EventCardWithDateSQL, error)
-	GetNearEvents(now time.Time, coord models.Coordinates, page int) ([]models.EventCardWithCoordsSQL, error)
-	GetOneEventByID(eventId uint64) (models.EventSQL, error)
-	GetOneEventNameByID(eventId uint64) (string, error)
-	DeleteById(eventId uint64) error
-	GetTags(eventId uint64) (models.Tags, error)
-	UpdateEventAvatar(eventId uint64, path string) error
-	GetEventsByCategory(typeEvent string, now time.Time, page int) ([]models.EventCardWithDateSQL, error)
-	FindEvents(str string, now time.Time, page int) ([]models.EventCardWithDateSQL, error)
-	RecomendSystem(uid uint64, category string) error
-	GetPreference(uid uint64) (models.Recomend, error)
-	GetRecommended(uid uint64, now time.Time, page int) ([]models.EventCardWithDateSQL, error)
-	CategorySearch(str string, category string, now time.Time, page int) ([]models.EventCardWithDateSQL, error)*/
 	CheckUser(user string) (bool, error)
 	CheckUserByEmail(email string) (bool, error)
 	CheckUserByNicknameOrEmail(nickname string, email string) (bool, error)
@@ -49,4 +35,15 @@ type Repository interface {
 	CheckVote(slug string, nickname string) (bool, error)
 	AddVote(slug string, vote models.Vote) error
 	UpdateVote(slug string, vote models.Vote) error
+	GetValueVote(slug string, nickname string) (int, error)
+	GetPostsFlat(id int ,limit int, since int) (models.Posts, error)
+	GetPostsFlatDesc(id int ,limit int, since int) (models.Posts, error)
+	GetPostsTree(id int ,limit int) (models.Posts, error)
+	GetPostsTreeDesc(id int ,limit int) (models.Posts, error)
+	GetPostsTreeSince(id int ,limit int, since int) (models.Posts, error)
+	GetPostsTreeSinceDesc(id int ,limit int, since int) (models.Posts, error)
+	GetPostsParentTree(id int ,limit int) (models.Posts, error)
+	GetPostsParentTreeDesc(id int ,limit int) (models.Posts, error)
+	GetPostsParentTreeSince(id int ,limit int, since int) (models.Posts, error)
+	GetPostsParentTreeSinceDesc(id int ,limit int, since int) (models.Posts, error)
 }
