@@ -43,7 +43,7 @@ func CreateSmthHandler(e *echo.Echo, uc smth.UseCase) {
 func (sd SmthHandler) GetThreadSort(c echo.Context) error {
 	defer c.Request().Body.Close()
 
-	slugOrId := c.Param("slugOrId")
+	slugOrId := c.Param("slug_or_id")
 	limit, err := strconv.Atoi(c.QueryParam("limit"))
 	if err != nil || limit == 0 {
 		limit = 100
@@ -54,9 +54,6 @@ func (sd SmthHandler) GetThreadSort(c echo.Context) error {
 		desc = false
 	}
 	sort := c.QueryParam("sort")
-	if sort == "" {
-		sort = "flat"
-	}
 
 	var posts models.Posts
 	var status int
@@ -88,7 +85,7 @@ func (sd SmthHandler) GetThreadSort(c echo.Context) error {
 func (sd SmthHandler) Vote(c echo.Context) error {
 	defer c.Request().Body.Close()
 
-	slugOrId := c.Param("slugOrId")
+	slugOrId := c.Param("slug_or_id")
 
 	vote := &models.Vote{}
 
@@ -108,7 +105,7 @@ func (sd SmthHandler) Vote(c echo.Context) error {
 func (sd SmthHandler) UpdateThread(c echo.Context) error {
 	defer c.Request().Body.Close()
 
-	slugOrId := c.Param("slugOrId")
+	slugOrId := c.Param("slug_or_id")
 
 	newThread := &models.Thread{}
 

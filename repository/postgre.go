@@ -131,11 +131,11 @@ func (sd SomeDatabase) CheckPost(id int) (bool, error) {
 	return true, nil
 }
 
-func (sd SomeDatabase) CheckVote(slug string, nickname string) (bool, error) {
+func (sd SomeDatabase) CheckVote(id int, nickname string) (bool, error) {
 	var ids []uint64
 	err := pgxscan.Select(context.Background(), sd.pool, &ids,
 		`SELECT 1 FROM votes
-	WHERE thread = $1 AND nickname = $2 LIMIT 1`, slug, nickname)
+	WHERE thread = $1 AND nickname = $2 LIMIT 1`, id, nickname)
 
 	if errors.As(err, &pgx.ErrNoRows) || len(ids) == 0 {
 		return false, nil
@@ -162,11 +162,11 @@ func (sd SomeDatabase) AddNewForum(newForum *models.Forum) (error, bool) {
 	return nil, false
 }
 
-func (sd SomeDatabase) AddVote(slug string, vote models.Vote) error {
+func (sd SomeDatabase) AddVote(id int, vote models.Vote) error {
 	_, err := sd.pool.Exec(context.Background(),
 		`INSERT INTO votes 
 		VALUES ($1, $2, $3)`,
-		slug, vote.Voice, vote.Nickname)
+		id, vote.Voice, vote.Nickname)
 	if err != nil {
 		return err
 	}
@@ -250,7 +250,22 @@ func (sd SomeDatabase) GetThreadById(id int) (models.Thread, int) {
 	return thread[0], http.StatusOK
 }
 
-//мб здесь падает, потому что нет перехода от даты к строке у поля created
+func (sd SomeDatabase) GetThreadStatus(slug string) (models.Thread, int) {
+	var thread []models.Thread
+	err := pgxscan.Select(context.Background(), sd.pool, &thread,
+		`SELECT * FROM threads WHERE slug = $1`, slug)
+
+	if errors.As(err, &pgx.ErrNoRows) || len(thread) == 0 {
+		return models.Thread{}, http.StatusNotFound
+	}
+
+	if err != nil {
+		return models.Thread{}, http.StatusInternalServerError
+	}
+
+	return thread[0], http.StatusOK
+}
+
 func (sd SomeDatabase) GetThread(slug string) (models.Thread, error) {
 	var ev []models.Thread
 	err := pgxscan.Select(context.Background(), sd.pool, &ev,
@@ -267,10 +282,10 @@ func (sd SomeDatabase) GetThread(slug string) (models.Thread, error) {
 	return ev[0], nil
 }
 
-func (sd SomeDatabase) GetValueVote(slug string, nickname string) (int, error) {
+func (sd SomeDatabase) GetValueVote(id int, nickname string) (int, error) {
 	var num []int
 	err := pgxscan.Select(context.Background(), sd.pool, &num,
-		`SELECT voice FROM votes WHERE slug = $1 AND nickname = $2`, slug, nickname)
+		`SELECT voice FROM votes WHERE thread = $1 AND nickname = $2`, id, nickname)
 
 	if err != nil {
 		return 0, err
@@ -341,7 +356,8 @@ func (sd SomeDatabase) GetForumUsers(slug string, limit int, since string, desc 
 func (sd SomeDatabase) GetPostsFlat(id int ,limit int, since int) (models.Posts, error) {
 	var posts models.Posts
 		err := pgxscan.Select(context.Background(), sd.pool, &posts,
-			`SELECT * FROM posts WHERE thread = $1 AND id > $2 
+			`SELECT id, author, created, forum, is_edited, message, parent, thread 
+			FROM posts WHERE thread = $1 AND id > $2 
 			ORDER BY created, id LIMIT $3`, id, since, limit)
 
 	if errors.As(err, &pgx.ErrNoRows) || len(posts) == 0 {
@@ -357,9 +373,18 @@ func (sd SomeDatabase) GetPostsFlat(id int ,limit int, since int) (models.Posts,
 
 func (sd SomeDatabase) GetPostsFlatDesc(id int ,limit int, since int) (models.Posts, error) {
 	var posts models.Posts
-	err := pgxscan.Select(context.Background(), sd.pool, &posts,
-		`SELECT * FROM posts WHERE thread = $1 AND id > $2 
-			ORDER BY created DESC, id LIMIT $3`, id, since, limit)
+	var err error
+	if since != 0 {
+		err = pgxscan.Select(context.Background(), sd.pool, &posts,
+			`SELECT id, author, created, forum, is_edited, message, parent, thread
+			FROM posts WHERE thread = $1 AND id < $2 
+			ORDER BY created DESC, id DESC LIMIT $3`, id, since, limit)
+	} else {
+		err = pgxscan.Select(context.Background(), sd.pool, &posts,
+			`SELECT id, author, created, forum, is_edited, message, parent, thread
+			FROM posts WHERE thread = $1 
+			ORDER BY created DESC, id DESC LIMIT $2`, id, limit)
+	}
 
 	if errors.As(err, &pgx.ErrNoRows) || len(posts) == 0 {
 		return models.Posts{}, nil
@@ -399,7 +424,7 @@ func (sd SomeDatabase) GetPostsParentTreeDesc(id int ,limit int) (models.Posts, 
 		`SELECT posts.id, posts.author, posts.created, posts.forum,
 			posts.is_edited, posts.message, posts.parent, posts.thread 
 			FROM (SELECT * FROM posts a WHERE a.parent = 0 AND a.thread = $1
-			ORDER BY a.path LIMIT $2) AS b
+			ORDER BY a.path DESC LIMIT $2) AS b
 			JOIN posts ON b.path[1] = posts.path[1]
 			ORDER BY posts.path[1] DESC, posts.path`, id, limit)
 
@@ -461,7 +486,8 @@ func (sd SomeDatabase) GetPostsParentTreeSinceDesc(id int ,limit int, since int)
 func (sd SomeDatabase) GetPostsTree(id int ,limit int) (models.Posts, error) {
 	var posts models.Posts
 	err := pgxscan.Select(context.Background(), sd.pool, &posts,
-		`SELECT * FROM posts WHERE thread = $1
+		`SELECT id, author, created, forum, is_edited, message, parent, thread
+			FROM posts WHERE thread = $1
 			ORDER BY path LIMIT $2`, id, limit)
 
 	if errors.As(err, &pgx.ErrNoRows) || len(posts) == 0 {
@@ -478,7 +504,8 @@ func (sd SomeDatabase) GetPostsTree(id int ,limit int) (models.Posts, error) {
 func (sd SomeDatabase) GetPostsTreeDesc(id int ,limit int) (models.Posts, error) {
 	var posts models.Posts
 	err := pgxscan.Select(context.Background(), sd.pool, &posts,
-		`SELECT * FROM posts WHERE thread = $1
+		`SELECT id, author, created, forum, is_edited, message, parent, thread
+			FROM posts WHERE thread = $1
 			ORDER BY path DESC LIMIT $2`, id, limit)
 
 	if errors.As(err, &pgx.ErrNoRows) || len(posts) == 0 {
@@ -495,7 +522,8 @@ func (sd SomeDatabase) GetPostsTreeDesc(id int ,limit int) (models.Posts, error)
 func (sd SomeDatabase) GetPostsTreeSince(id int ,limit int, since int) (models.Posts, error) {
 	var posts models.Posts
 	err := pgxscan.Select(context.Background(), sd.pool, &posts,
-		`SELECT * FROM posts WHERE thread = $1 AND path > (SELECT path FROM posts WHERE id = $2)
+		`SELECT id, author, created, forum, is_edited, message, parent, thread
+			FROM posts WHERE thread = $1 AND path > (SELECT path FROM posts WHERE id = $2)
 			ORDER BY path LIMIT $3`, id, since, limit)
 
 	if errors.As(err, &pgx.ErrNoRows) || len(posts) == 0 {
@@ -512,7 +540,8 @@ func (sd SomeDatabase) GetPostsTreeSince(id int ,limit int, since int) (models.P
 func (sd SomeDatabase) GetPostsTreeSinceDesc(id int ,limit int, since int) (models.Posts, error) {
 	var posts models.Posts
 	err := pgxscan.Select(context.Background(), sd.pool, &posts,
-		`SELECT * FROM posts WHERE thread = $1 AND path > (SELECT path FROM posts WHERE id = $2)
+		`SELECT id, author, created, forum, is_edited, message, parent, thread
+			FROM posts WHERE thread = $1 AND path < (SELECT path FROM posts WHERE id = $2)
 			ORDER BY path DESC LIMIT $3`, id, since, limit)
 
 	if errors.As(err, &pgx.ErrNoRows) || len(posts) == 0 {
@@ -599,10 +628,10 @@ func (sd SomeDatabase) UpdateThread(slugOrId string, thread models.Thread) (mode
 	return thread, nil
 }
 
-func (sd SomeDatabase) UpdateVote(slug string, vote models.Vote) error {
+func (sd SomeDatabase) UpdateVote(id int, vote models.Vote) error {
 	_, err := sd.pool.Exec(context.Background(),
 		`UPDATE votes SET voice = $1 WHERE thread = $2 AND nickname = $3`, vote.Voice,
-		slug, vote.Nickname)
+		id, vote.Nickname)
 
 	if err != nil {
 		return err
@@ -613,7 +642,7 @@ func (sd SomeDatabase) UpdateVote(slug string, vote models.Vote) error {
 
 func (sd SomeDatabase) UpdateThreadById(id int, thread models.Thread) (models.Thread, error) {
 	err := sd.pool.QueryRow(context.Background(),
-		`UPDATE threads SET message = $1, title = $2 WHERE slug = $3
+		`UPDATE threads SET message = $1, title = $2 WHERE id = $3
 			RETURNING threads.id, threads.author, threads.created, threads.forum,
 			threads.message, threads.slug, threads.title, threads.votes`, thread.Message,
 		thread.Title, id).Scan(&thread.Id, &thread.Author, &thread.Created,

@@ -14,6 +14,7 @@ type Repository interface {
 	CheckThreadById(id int) (bool, error)
 	CheckPost(id int) (bool, error)
 	GetThread(slug string) (models.Thread, error)
+	GetThreadStatus(slug string) (models.Thread, int)
 	GetThreadById(id int) (models.Thread, int)
 	GetPost(id int) (models.Post, int)
 	GetUser(name string) (models.User, int)
@@ -32,10 +33,10 @@ type Repository interface {
 	AddPost(post models.Post) (models.Post, error)
 	UpdateThread(slugOrId string, thread models.Thread) (models.Thread, error)
 	UpdateThreadById(id int, thread models.Thread) (models.Thread, error)
-	CheckVote(slug string, nickname string) (bool, error)
-	AddVote(slug string, vote models.Vote) error
-	UpdateVote(slug string, vote models.Vote) error
-	GetValueVote(slug string, nickname string) (int, error)
+	CheckVote(id int, nickname string) (bool, error)
+	AddVote(id int, vote models.Vote) error
+	UpdateVote(id int, vote models.Vote) error
+	GetValueVote(id int, nickname string) (int, error)
 	GetPostsFlat(id int ,limit int, since int) (models.Posts, error)
 	GetPostsFlatDesc(id int ,limit int, since int) (models.Posts, error)
 	GetPostsTree(id int ,limit int) (models.Posts, error)

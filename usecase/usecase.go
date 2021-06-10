@@ -64,25 +64,23 @@ func (s Smth) GetForumUsers(slug string, limit int, since string, desc bool) (mo
 }
 
 func (s Smth) CreateNewThread(newThread *models.Thread) (models.Thread, int) {
-	isExist, err := s.repo.CheckUser(newThread.Author)
-	if err != nil {
-		return models.Thread{}, http.StatusInternalServerError
-	}
-	if !isExist {
+	user, status := s.repo.GetUser(newThread.Author)
+	if status == constants.NotFound {
 		return models.Thread{}, constants.NotFound
 	}
+	newThread.Author = user.Nickname
 
-	isExisted, err := s.repo.CheckForum(newThread.Forum)
-	if err != nil {
-		return models.Thread{}, http.StatusInternalServerError
-	}
-	if !isExisted {
+	forum, status := s.repo.GetForum(newThread.Forum)
+	if status == constants.NotFound {
 		return models.Thread{}, constants.NotFound
 	}
+	newThread.Forum = forum.Slug
 
+	var err error
 	newThread.Id, err = s.repo.AddNewThread(*newThread)
 	if err != nil {
-		return models.Thread{}, http.StatusInternalServerError
+		thread, _ := s.repo.GetThread(newThread.Slug)
+		return thread, http.StatusConflict
 	}
 	err = s.repo.IncrementThreads(newThread.Forum)
 
@@ -356,6 +354,7 @@ func (s Smth) UpdateThread(slugOrId string, newThread models.Thread) (models.Thr
 
 func (s Smth) Vote(slugOrId string, vote models.Vote) (models.Thread, int) {
 	var thread models.Thread
+	var status int
 	isExist, err := s.repo.CheckUser(vote.Nickname)
 	if err != nil {
 		return models.Thread{}, http.StatusInternalServerError
@@ -364,56 +363,55 @@ func (s Smth) Vote(slugOrId string, vote models.Vote) (models.Thread, int) {
 		return models.Thread{}, http.StatusNotFound
 	}
 	if id, err := strconv.Atoi(slugOrId); err != nil {
-		isExist, err := s.repo.CheckThread(slugOrId)
-		if err != nil {
-			return models.Thread{}, http.StatusInternalServerError
-		}
-		if !isExist {
-			return models.Thread{}, http.StatusNotFound
-		}
-		isExist, err = s.repo.CheckVote(slugOrId, vote.Nickname)
-		if err != nil {
-			return models.Thread{}, http.StatusInternalServerError
-		}
-		if !isExist {
-			err = s.repo.AddVote(slugOrId, vote)
-			if err != nil {
-				return models.Thread{}, http.StatusInternalServerError
-			}
-		} else {
-			num, err := s.repo.GetValueVote(slugOrId, vote.Nickname)
-			if err != nil {
-				return models.Thread{}, http.StatusInternalServerError
-			}
-			if num != vote.Voice {
-				err = s.repo.UpdateVote(slugOrId, vote)
-				if err != nil {
-					return models.Thread{}, http.StatusInternalServerError
-				}
-			}
-			thread, _ = s.repo.GetThread(slugOrId)
-		}
-	} else {
-		thread, status := s.repo.GetThreadById(id)
+		thread, status = s.repo.GetThreadStatus(slugOrId)
 		if status == constants.NotFound {
 			return models.Thread{}, http.StatusNotFound
 		}
-		isExist, err = s.repo.CheckVote(thread.Slug, vote.Nickname)
+		isExist, err = s.repo.CheckVote(int(thread.Id), vote.Nickname)
 		if err != nil {
 			return models.Thread{}, http.StatusInternalServerError
 		}
 		if !isExist {
-			err = s.repo.AddVote(thread.Slug, vote)
+			err = s.repo.AddVote(int(thread.Id), vote)
 			if err != nil {
 				return models.Thread{}, http.StatusInternalServerError
 			}
+			thread.Votes += vote.Voice
 		} else {
-			num, err := s.repo.GetValueVote(thread.Slug, vote.Nickname)
+			num, err := s.repo.GetValueVote(int(thread.Id), vote.Nickname)
 			if err != nil {
 				return models.Thread{}, http.StatusInternalServerError
 			}
 			if num != vote.Voice {
-				err = s.repo.UpdateVote(slugOrId, vote)
+				err = s.repo.UpdateVote(int(thread.Id), vote)
+				if err != nil {
+					return models.Thread{}, http.StatusInternalServerError
+				}
+				thread.Votes += 2 * vote.Voice
+			}
+		}
+	} else {
+		thread, status = s.repo.GetThreadById(id)
+		if status == constants.NotFound {
+			return models.Thread{}, http.StatusNotFound
+		}
+		isExist, err = s.repo.CheckVote(id, vote.Nickname)
+		if err != nil {
+			return models.Thread{}, http.StatusInternalServerError
+		}
+		if !isExist {
+			err = s.repo.AddVote(int(thread.Id), vote)
+			if err != nil {
+				return models.Thread{}, http.StatusInternalServerError
+			}
+			thread.Votes += vote.Voice
+		} else {
+			num, err := s.repo.GetValueVote(int(thread.Id), vote.Nickname)
+			if err != nil {
+				return models.Thread{}, http.StatusInternalServerError
+			}
+			if num != vote.Voice {
+				err = s.repo.UpdateVote(id, vote)
 				if err != nil {
 					return models.Thread{}, http.StatusInternalServerError
 				}
