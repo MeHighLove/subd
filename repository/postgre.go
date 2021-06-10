@@ -310,14 +310,14 @@ func (sd SomeDatabase) GetForumUsers(slug string, limit int, since string, desc 
 		err = pgxscan.Select(context.Background(), sd.pool, &users,
 			`select users.nickname, fullname, email, about from forum_users join users
 			on forum_users.nickname = users.nickname
-			where forum_users.forum = $1 AND lower(users.nickname) > lower($2) 
-			order by lower(users.nickname) DESC LIMIT $3`, slug, since, limit)
+			where forum_users.forum = $1 AND users.nickname > $2 
+			order by users.nickname DESC LIMIT $3`, slug, since, limit)
 	} else {
 		err = pgxscan.Select(context.Background(), sd.pool, &users,
 			`select users.nickname, fullname, email, about from forum_users join users
 			on forum_users.nickname = users.nickname
-			where forum_users.forum = $1 AND lower(users.nickname) > lower($2) 
-			order by lower(users.nickname) LIMIT $3`, slug, since, limit)
+			where forum_users.forum = $1 AND users.nickname > $2 
+			order by users.nickname LIMIT $3`, slug, since, limit)
 	}
 	if errors.As(err, &pgx.ErrNoRows) || len(users) == 0 {
 		return models.Users{}, nil

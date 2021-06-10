@@ -315,7 +315,7 @@ func (s Smth) CreateUser(nickname string, user models.User) (models.Users, int) 
 	newUser, _ := s.repo.GetUser(nickname)
 	users = append(users, newUser)
 
-	return users, http.StatusOK
+	return users, http.StatusCreated
 }
 
 func (s Smth) UpdateUser(nickname string, user models.User) (models.User, int) {

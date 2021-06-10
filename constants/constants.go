@@ -9,7 +9,7 @@ const (
 	IdKey             = "id"
 	NotFound = 404
 	//CSRFHeader              = "header:X-XSRF-TOKEN"
-	DBConnect      = "user=postgre dbname=qdago password=fyvaoldzh host=localhost port=5432 sslmode=disable pool_max_conns=50"
+	DBConnect      = "user=postgres dbname=qdago password=postgres host=localhost port=5432 sslmode=disable pool_max_conns=50"
 	DateFormat     = "2006-01-02"
 	DateTimeFormat = "2006-01-02T15:04:05"
 	//DefaultAvatar           = "public/default.png"
