@@ -77,6 +77,14 @@ func (sd SmthHandler) GetThreadSort(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusNotFound, "Can't find post with id ")
 	}
 
+	/*if len(posts) != 0 {
+		for i := range posts {
+			if posts[i].Id == 750014 || posts[i].Id == 749781 {
+				log.Info(posts[i].Id, i)
+				log.Info(slugOrId, since, limit, desc)
+			}
+		}
+	}*/
 	return c.JSON(status, posts)
 }
 

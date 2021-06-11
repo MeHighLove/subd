@@ -82,9 +82,6 @@ func (s Smth) CreateNewThread(newThread *models.Thread) (models.Thread, int) {
 		thread, _ := s.repo.GetThread(newThread.Slug)
 		return thread, http.StatusConflict
 	}
-	err = s.repo.IncrementThreads(newThread.Forum)
-
-	s.repo.AddForumUsers(newThread.Forum, newThread.Author)
 
 	return *newThread, http.StatusCreated
 }
@@ -93,16 +90,9 @@ func (s Smth) GetThread(slugOrId string) (models.Thread, int) {
 	var thread models.Thread
 	var status int
 	if id, err := strconv.Atoi(slugOrId); err != nil {
-		isExist, err := s.repo.CheckThread(slugOrId)
-		if err != nil {
-			return models.Thread{}, http.StatusInternalServerError
-		}
-		if !isExist {
+		thread, status = s.repo.GetThreadStatus(slugOrId)
+		if status == constants.NotFound {
 			return models.Thread{}, http.StatusNotFound
-		}
-		thread, err = s.repo.GetThread(slugOrId)
-		if err != nil {
-			return models.Thread{}, http.StatusInternalServerError
 		}
 	} else {
 		thread, status = s.repo.GetThreadById(id)
@@ -158,8 +148,6 @@ func (s Smth) CreateNewPosts(newPosts models.Posts, slugOrId string) (models.Pos
 		if err != nil {
 			return models.Posts{}, http.StatusConflict
 		}
-		err = s.repo.IncrementPosts(newPosts[i].Forum)
-		s.repo.AddForumUsers(newPosts[i].Forum, newPosts[i].Author)
 	}
 
 	return newPosts, http.StatusCreated
@@ -180,7 +168,6 @@ func (s Smth) CreateNewForum(newForum *models.Forum) (models.Forum, int) {
 	if err != nil {
 		return models.Forum{}, http.StatusInternalServerError
 	}
-	//s.repo.AddForumUsers(newForum.Slug, newForum.Owner)
 
 	return *newForum, http.StatusCreated
 }
@@ -447,16 +434,9 @@ func (s Smth) GetThreadSortFlat(slugOrId string, limit int, since int, desc bool
 	var thread models.Thread
 	var status int
 	if id, err := strconv.Atoi(slugOrId); err != nil {
-		isExist, err := s.repo.CheckThread(slugOrId)
-		if err != nil {
-			return models.Posts{}, http.StatusInternalServerError
-		}
-		if !isExist {
+		thread, status = s.repo.GetThreadStatus(slugOrId)
+		if status == constants.NotFound {
 			return models.Posts{}, http.StatusNotFound
-		}
-		thread, err = s.repo.GetThread(slugOrId)
-		if err != nil {
-			return models.Posts{}, http.StatusInternalServerError
 		}
 	} else {
 		thread, status = s.repo.GetThreadById(id)
@@ -483,16 +463,9 @@ func (s Smth) GetThreadSortTree(slugOrId string, limit int, since int, desc bool
 	var thread models.Thread
 	var status int
 	if id, err := strconv.Atoi(slugOrId); err != nil {
-		isExist, err := s.repo.CheckThread(slugOrId)
-		if err != nil {
-			return models.Posts{}, http.StatusInternalServerError
-		}
-		if !isExist {
+		thread, status = s.repo.GetThreadStatus(slugOrId)
+		if status == constants.NotFound {
 			return models.Posts{}, http.StatusNotFound
-		}
-		thread, err = s.repo.GetThread(slugOrId)
-		if err != nil {
-			return models.Posts{}, http.StatusInternalServerError
 		}
 	} else {
 		thread, status = s.repo.GetThreadById(id)
@@ -535,16 +508,9 @@ func (s Smth) GetThreadSortParentTree(slugOrId string, limit int, since int, des
 	var thread models.Thread
 	var status int
 	if id, err := strconv.Atoi(slugOrId); err != nil {
-		isExist, err := s.repo.CheckThread(slugOrId)
-		if err != nil {
-			return models.Posts{}, http.StatusInternalServerError
-		}
-		if !isExist {
+		thread, status = s.repo.GetThreadStatus(slugOrId)
+		if status == constants.NotFound {
 			return models.Posts{}, http.StatusNotFound
-		}
-		thread, err = s.repo.GetThread(slugOrId)
-		if err != nil {
-			return models.Posts{}, http.StatusInternalServerError
 		}
 	} else {
 		thread, status = s.repo.GetThreadById(id)

@@ -10,10 +10,18 @@ DROP TABLE IF EXISTS users CASCADE;
 DROP FUNCTION IF EXISTS insert_votes();
 DROP FUNCTION IF EXISTS update_votes();
 DROP FUNCTION IF EXISTS post_path();
+DROP FUNCTION IF EXISTS increment_thread();
+DROP FUNCTION IF EXISTS increment_posts();
+DROP FUNCTION IF EXISTS add_forum_user();
+
 
 DROP TRIGGER IF EXISTS insert_votes ON votes;
 DROP TRIGGER IF EXISTS update_votes ON votes;
 DROP TRIGGER IF EXISTS post_path ON posts;
+DROP TRIGGER IF EXISTS increment_posts ON posts;
+DROP TRIGGER IF EXISTS increment_thread ON threads;
+DROP TRIGGER IF EXISTS add_forum_user_thread ON threads;
+DROP TRIGGER IF EXISTS add_forum_user_posts ON posts;
 
 CREATE TABLE users
 (
@@ -170,3 +178,46 @@ $post_path$ LANGUAGE plpgsql;
 CREATE TRIGGER post_path
     BEFORE INSERT ON posts FOR EACH ROW
 EXECUTE PROCEDURE post_path();
+
+CREATE OR REPLACE  FUNCTION increment_thread()
+    RETURNS TRIGGER AS
+$increment_thread$
+BEGIN
+    UPDATE forums SET threads = threads + 1 WHERE slug = new.forum;
+    RETURN new;
+END;
+$increment_thread$ LANGUAGE  plpgsql;
+
+CREATE TRIGGER increment_thread
+    BEFORE INSERT ON threads FOR EACH ROW
+    EXECUTE PROCEDURE increment_thread();
+
+CREATE OR REPLACE  FUNCTION increment_posts()
+    RETURNS TRIGGER AS
+$increment_thread$
+BEGIN
+    UPDATE forums SET posts = posts + 1 WHERE slug = new.forum;
+    RETURN new;
+END;
+$increment_thread$ LANGUAGE  plpgsql;
+
+CREATE TRIGGER increment_posts
+    BEFORE INSERT ON posts FOR EACH ROW
+EXECUTE PROCEDURE increment_posts();
+
+CREATE OR REPLACE FUNCTION add_forum_user()
+    RETURNS TRIGGER AS
+$add_forum_user$
+BEGIN
+    INSERT INTO forum_users (nickname, forum) VALUES (new.author, new.forum) ON CONFLICT DO NOTHING;
+    RETURN new;
+END;
+$add_forum_user$ LANGUAGE plpgsql;
+
+CREATE TRIGGER add_forum_user_thread
+    AFTER INSERT ON threads FOR EACH ROW
+EXECUTE PROCEDURE add_forum_user();
+
+CREATE TRIGGER add_forum_user_posts
+    AFTER INSERT ON posts FOR EACH ROW
+EXECUTE PROCEDURE add_forum_user();
