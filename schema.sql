@@ -10,10 +10,15 @@ DROP TABLE IF EXISTS users CASCADE;
 DROP FUNCTION IF EXISTS insert_votes();
 DROP FUNCTION IF EXISTS update_votes();
 DROP FUNCTION IF EXISTS post_path();
+DROP FUNCTION IF EXISTS increment_thread();
+DROP FUNCTION IF EXISTS increment_posts();
+
 
 DROP TRIGGER IF EXISTS insert_votes ON votes;
 DROP TRIGGER IF EXISTS update_votes ON votes;
 DROP TRIGGER IF EXISTS post_path ON posts;
+DROP TRIGGER IF EXISTS increment_posts ON posts;
+DROP TRIGGER IF EXISTS increment_thread ON threads;
 
 CREATE TABLE users
 (
@@ -176,3 +181,29 @@ CREATE TRIGGER post_path
     ON posts
     FOR EACH ROW
     EXECUTE PROCEDURE post_path();
+
+CREATE OR REPLACE  FUNCTION increment_thread()
+    RETURNS TRIGGER AS
+$increment_thread$
+BEGIN
+    UPDATE forums SET threads = threads + 1 WHERE slug = new.forum;
+    RETURN new;
+END;
+$increment_thread$ LANGUAGE  plpgsql;
+
+CREATE TRIGGER increment_thread
+    BEFORE INSERT ON threads FOR EACH ROW
+    EXECUTE PROCEDURE increment_thread();
+
+CREATE OR REPLACE  FUNCTION increment_posts()
+    RETURNS TRIGGER AS
+$increment_thread$
+BEGIN
+    UPDATE forums SET posts = posts + 1 WHERE slug = new.forum;
+    RETURN new;
+END;
+$increment_thread$ LANGUAGE  plpgsql;
+
+CREATE TRIGGER increment_posts
+    BEFORE INSERT ON posts FOR EACH ROW
+EXECUTE PROCEDURE increment_posts();
