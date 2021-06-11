@@ -115,10 +115,8 @@ END;
 $insert_votes$ language plpgsql;
 
 CREATE TRIGGER insert_votes
-    BEFORE INSERT
-    ON votes
-    FOR EACH ROW
-    EXECUTE PROCEDURE insert_votes();
+    BEFORE INSERT ON votes FOR EACH ROW
+EXECUTE PROCEDURE insert_votes();
 
 
 
@@ -140,10 +138,8 @@ END;
 $update_votes$ LANGUAGE plpgsql;
 
 CREATE TRIGGER update_votes
-    BEFORE UPDATE
-    ON votes
-    FOR EACH ROW
-    EXECUTE PROCEDURE update_votes();
+    BEFORE UPDATE ON votes FOR EACH ROW
+EXECUTE PROCEDURE update_votes();
 
 
 
@@ -172,7 +168,5 @@ END;
 $post_path$ LANGUAGE plpgsql;
 
 CREATE TRIGGER post_path
-    BEFORE INSERT
-    ON posts
-    FOR EACH ROW
-    EXECUTE PROCEDURE post_path();
+    BEFORE INSERT ON posts FOR EACH ROW
+EXECUTE PROCEDURE post_path();
