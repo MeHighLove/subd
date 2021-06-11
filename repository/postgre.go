@@ -387,18 +387,10 @@ func (sd SomeDatabase) GetForumUsers(slug string, limit int, since string, desc 
 
 func (sd SomeDatabase) GetPostsFlat(id int ,limit int, since int) (models.Posts, error) {
 	var posts models.Posts
-	var err error
-	if since == 0 {
-		err = pgxscan.Select(context.Background(), sd.pool, &posts,
-			`SELECT id, author, created, forum, is_edited, message, parent, thread 
-			FROM posts WHERE thread = $1
-			ORDER BY created, id LIMIT $2`, id, limit)
-	} else {
-		err = pgxscan.Select(context.Background(), sd.pool, &posts,
+		err := pgxscan.Select(context.Background(), sd.pool, &posts,
 			`SELECT id, author, created, forum, is_edited, message, parent, thread 
 			FROM posts WHERE thread = $1 AND id > $2 
 			ORDER BY created, id LIMIT $3`, id, since, limit)
-	}
 
 	if errors.As(err, &pgx.ErrNoRows) || len(posts) == 0 {
 		return models.Posts{}, nil
