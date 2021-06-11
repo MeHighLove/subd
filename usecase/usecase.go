@@ -83,8 +83,6 @@ func (s Smth) CreateNewThread(newThread *models.Thread) (models.Thread, int) {
 		return thread, http.StatusConflict
 	}
 
-	s.repo.AddForumUsers(newThread.Forum, newThread.Author)
-
 	return *newThread, http.StatusCreated
 }
 
@@ -150,7 +148,6 @@ func (s Smth) CreateNewPosts(newPosts models.Posts, slugOrId string) (models.Pos
 		if err != nil {
 			return models.Posts{}, http.StatusConflict
 		}
-		s.repo.AddForumUsers(newPosts[i].Forum, newPosts[i].Author)
 	}
 
 	return newPosts, http.StatusCreated

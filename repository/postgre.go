@@ -387,10 +387,18 @@ func (sd SomeDatabase) GetForumUsers(slug string, limit int, since string, desc 
 
 func (sd SomeDatabase) GetPostsFlat(id int ,limit int, since int) (models.Posts, error) {
 	var posts models.Posts
-		err := pgxscan.Select(context.Background(), sd.pool, &posts,
+	var err error
+	if since == 0 {
+		err = pgxscan.Select(context.Background(), sd.pool, &posts,
+			`SELECT id, author, created, forum, is_edited, message, parent, thread 
+			FROM posts WHERE thread = $1
+			ORDER BY created, id LIMIT $2`, id, limit)
+	} else {
+		err = pgxscan.Select(context.Background(), sd.pool, &posts,
 			`SELECT id, author, created, forum, is_edited, message, parent, thread 
 			FROM posts WHERE thread = $1 AND id > $2 
 			ORDER BY created, id LIMIT $3`, id, since, limit)
+	}
 
 	if errors.As(err, &pgx.ErrNoRows) || len(posts) == 0 {
 		return models.Posts{}, nil
@@ -500,7 +508,7 @@ func (sd SomeDatabase) GetPostsParentTreeSinceDesc(id int ,limit int, since int)
 			posts.is_edited, posts.message, posts.parent, posts.thread 
 			FROM (SELECT * FROM posts a WHERE a.parent = 0 AND a.thread = $1
 			AND a.path[1] < (SELECT path[1] FROM posts WHERE id = $2)
-			ORDER BY a.path LIMIT $3) AS b
+			ORDER BY a.path DESC LIMIT $3) AS b
 			JOIN posts ON b.path[1] = posts.path[1]
 			ORDER BY posts.path[1] DESC, posts.path`, id, since, limit)
 
