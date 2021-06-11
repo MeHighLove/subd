@@ -120,16 +120,9 @@ func (s Smth) CreateNewPosts(newPosts models.Posts, slugOrId string) (models.Pos
 	var thread models.Thread
 	var status int
 	if id, err := strconv.Atoi(slugOrId); err != nil {
-		isExist, err := s.repo.CheckThread(slugOrId)
-		if err != nil {
-			return models.Posts{}, http.StatusInternalServerError
-		}
-		if !isExist {
+		thread, status = s.repo.GetThreadStatus(slugOrId)
+		if status == constants.NotFound {
 			return models.Posts{}, http.StatusNotFound
-		}
-		thread, err = s.repo.GetThread(slugOrId)
-		if err != nil {
-			return models.Posts{}, http.StatusInternalServerError
 		}
 	} else {
 		thread, status = s.repo.GetThreadById(id)

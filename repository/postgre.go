@@ -251,7 +251,7 @@ func (sd SomeDatabase) GetUser(name string) (models.User, int) {
 }
 
 func (sd SomeDatabase) GetThreadById(id int) (models.Thread, int) {
-	var thread []models.Thread
+	var thread []models.ThreadSQL
 	err := pgxscan.Select(context.Background(), sd.pool, &thread,
 		`SELECT * FROM threads WHERE id = $1`, id)
 
@@ -263,11 +263,11 @@ func (sd SomeDatabase) GetThreadById(id int) (models.Thread, int) {
 		return models.Thread{}, http.StatusInternalServerError
 	}
 
-	return thread[0], http.StatusOK
+	return models.ConvertThread(thread[0]), http.StatusOK
 }
 
 func (sd SomeDatabase) GetThreadStatus(slug string) (models.Thread, int) {
-	var thread []models.Thread
+	var thread []models.ThreadSQL
 	err := pgxscan.Select(context.Background(), sd.pool, &thread,
 		`SELECT * FROM threads WHERE slug = $1`, slug)
 
@@ -279,11 +279,11 @@ func (sd SomeDatabase) GetThreadStatus(slug string) (models.Thread, int) {
 		return models.Thread{}, http.StatusInternalServerError
 	}
 
-	return thread[0], http.StatusOK
+	return models.ConvertThread(thread[0]), http.StatusOK
 }
 
 func (sd SomeDatabase) GetThread(slug string) (models.Thread, error) {
-	var ev []models.Thread
+	var ev []models.ThreadSQL
 	err := pgxscan.Select(context.Background(), sd.pool, &ev,
 		`SELECT * FROM threads WHERE slug = $1`, slug)
 
@@ -295,7 +295,7 @@ func (sd SomeDatabase) GetThread(slug string) (models.Thread, error) {
 		return models.Thread{}, err
 	}
 
-	return ev[0], nil
+	return models.ConvertThread(ev[0]), nil
 }
 
 func (sd SomeDatabase) GetValueVote(id int, nickname string) (int, error) {
@@ -600,7 +600,7 @@ func (sd SomeDatabase) AddForumUsers(slug string, author string) error {
 }
 
 func (sd SomeDatabase) GetForumThreads(slug string, limit int, since string, desc bool) (models.Threads, error) {
-	var threads models.Threads
+	var threads []models.ThreadSQL
 	var err error
 	if since == "" {
 		if desc == true {
@@ -631,7 +631,11 @@ func (sd SomeDatabase) GetForumThreads(slug string, limit int, since string, des
 		return nil, err
 	}
 
-	return threads, nil
+	var threads2 []models.Thread
+	for i := range threads {
+		threads2 = append(threads2, models.ConvertThread(threads[i]))
+	}
+	return threads2, nil
 }
 
 func (sd SomeDatabase) EditMessage(id int, message string) error {

@@ -1,6 +1,9 @@
 package models
 
-import "github.com/go-openapi/strfmt"
+import (
+	"database/sql"
+	"github.com/go-openapi/strfmt"
+)
 
 type Vote struct {
 	Nickname string `json:"nickname"`
@@ -54,6 +57,17 @@ type Post struct {
 	Thread   int           `json:"thread"`
 }
 
+type ThreadSQL struct {
+	Id uint64 `json:"id"`
+	Author string `json:"author"`
+	Created strfmt.DateTime `json:"created"`
+	Forum string `json:"forum"`
+	Message string `json:"message"`
+	Slug sql.NullString `json:"slug"`
+	Title string `json:"title"`
+	Votes int `json:"votes"`
+}
+
 type Thread struct {
 	Id uint64 `json:"id"`
 	Author string `json:"author"`
@@ -91,4 +105,17 @@ func ConvertPostToNullMessage(post Post) (PostNullMessage) {
 	newPost.Created = post.Created
 	newPost.Parent = post.Parent
 	return newPost
+}
+
+func ConvertThread(old ThreadSQL) (Thread) {
+	var newThread Thread
+	newThread.Author = old.Author
+	newThread.Id = old.Id
+	newThread.Forum = old.Forum
+	newThread.Slug = old.Slug.String
+	newThread.Title = old.Title
+	newThread.Created = old.Created
+	newThread.Message = old.Message
+	newThread.Votes = old.Votes
+	return newThread
 }
