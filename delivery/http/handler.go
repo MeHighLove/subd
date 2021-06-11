@@ -15,8 +15,6 @@ type SmthHandler struct {
 	UseCase   smth.UseCase
 }
 
-//TODO Разобраться с чеками(они все не нужны). Передавать можно все по ссылке. Поправить все ответы об ошибках(сделать message:...)
-//TODO Инкрементить на 1 треды при их создании(в бд прям функцию)
 func CreateSmthHandler(e *echo.Echo, uc smth.UseCase) {
 	handler := SmthHandler{UseCase: uc}
 
