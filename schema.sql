@@ -18,7 +18,7 @@ DROP TRIGGER IF EXISTS post_path ON posts;
 CREATE TABLE users
 (
     id       SERIAL PRIMARY KEY,
-    nickname CITEXT UNIQUE NOT NULL,
+    nickname CITEXT COLLATE "C" UNIQUE NOT NULL,
     fullname CITEXT        NOT NULL,
     about    TEXT                      NOT NULL,
     email    CITEXT UNIQUE             NOT NULL
@@ -91,7 +91,7 @@ create unique index votes_user_thread on votes (thread, nickname);
 CREATE TABLE forum_users
 (
     forum    CITEXT REFERENCES forums (slug) ON DELETE CASCADE NOT NULL,
-    nickname CITEXT REFERENCES users (nickname) ON DELETE CASCADE NOT NULL,
+    nickname CITEXT COLLATE "C" REFERENCES users (nickname) ON DELETE CASCADE NOT NULL,
     UNIQUE (forum, nickname)
 );
 

@@ -205,7 +205,7 @@ func (sd SomeDatabase) GetForum(slug string) (models.Forum, int) {
 func (sd SomeDatabase) GetPost(id int) (models.Post, int) {
 	var post []models.Post
 	err := pgxscan.Select(context.Background(), sd.pool, &post,
-		`SELECT * FROM posts WHERE id = $1`, id)
+		`SELECT id, author, created, forum, is_edited, message, parent, thread FROM posts WHERE id = $1`, id)
 
 	if errors.As(err, &pgx.ErrNoRows) || len(post) == 0 {
 		return models.Post{}, http.StatusNotFound
@@ -329,18 +329,34 @@ func (sd SomeDatabase) AddPost(post models.Post) (models.Post, error) {
 func (sd SomeDatabase) GetForumUsers(slug string, limit int, since string, desc bool) (models.Users, error) {
 	var users models.Users
 	var err error
-	if desc == true {
-		err = pgxscan.Select(context.Background(), sd.pool, &users,
-			`select users.nickname, fullname, email, about from forum_users join users
-			on forum_users.nickname = users.nickname
-			where forum_users.forum = $1 AND users.nickname > $2 
-			order by users.nickname DESC LIMIT $3`, slug, since, limit)
+	if since != "" {
+		if desc == true {
+			err = pgxscan.Select(context.Background(), sd.pool, &users,
+				`SELECT users.nickname, users.fullname, users.email, users.about FROM forum_users JOIN users
+			ON forum_users.nickname = users.nickname
+			WHERE forum_users.forum = $1 AND users.nickname < $2 
+			ORDER BY users.nickname DESC LIMIT $3`, slug, since, limit)
+		} else {
+			err = pgxscan.Select(context.Background(), sd.pool, &users,
+				`SELECT users.nickname, users.fullname, users.email, users.about FROM forum_users JOIN users
+			ON forum_users.nickname = users.nickname
+			WHERE forum_users.forum = $1 AND users.nickname > $2 
+			ORDER BY users.nickname LIMIT $3`, slug, since, limit)
+		}
 	} else {
-		err = pgxscan.Select(context.Background(), sd.pool, &users,
-			`select users.nickname, fullname, email, about from forum_users join users
-			on forum_users.nickname = users.nickname
-			where forum_users.forum = $1 AND users.nickname > $2 
-			order by users.nickname LIMIT $3`, slug, since, limit)
+		if desc == true {
+			err = pgxscan.Select(context.Background(), sd.pool, &users,
+				`SELECT users.nickname, users.fullname, users.email, users.about FROM forum_users JOIN users
+			ON forum_users.nickname = users.nickname
+			WHERE forum_users.forum = $1 
+			ORDER BY users.nickname DESC LIMIT $2`, slug, limit)
+		} else {
+			err = pgxscan.Select(context.Background(), sd.pool, &users,
+				`SELECT users.nickname, users.fullname, users.email, users.about FROM forum_users JOIN users
+			ON forum_users.nickname = users.nickname
+			WHERE forum_users.forum = $1 
+			ORDER BY users.nickname LIMIT $2`, slug, limit)
+		}
 	}
 	if errors.As(err, &pgx.ErrNoRows) || len(users) == 0 {
 		return models.Users{}, nil

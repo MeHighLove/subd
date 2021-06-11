@@ -148,6 +148,7 @@ func (s Smth) CreateNewPosts(newPosts models.Posts, slugOrId string) (models.Pos
 	now := time.Now()
 
 	var err error
+	//Здесь тоже можно будет делать добавление в форум-юзер функцией!!!
 	for i := range newPosts {
 		newPosts[i].Thread = int(thread.Id)
 		newPosts[i].Forum = thread.Forum
@@ -157,6 +158,7 @@ func (s Smth) CreateNewPosts(newPosts models.Posts, slugOrId string) (models.Pos
 			return models.Posts{}, http.StatusConflict
 		}
 		err = s.repo.IncrementPosts(newPosts[i].Forum)
+		s.repo.AddForumUsers(newPosts[i].Forum, newPosts[i].Author)
 	}
 
 	return newPosts, http.StatusCreated
@@ -177,7 +179,7 @@ func (s Smth) CreateNewForum(newForum *models.Forum) (models.Forum, int) {
 	if err != nil {
 		return models.Forum{}, http.StatusInternalServerError
 	}
-	s.repo.AddForumUsers(newForum.Slug, newForum.Owner)
+	//s.repo.AddForumUsers(newForum.Slug, newForum.Owner)
 
 	return *newForum, http.StatusCreated
 }
