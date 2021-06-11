@@ -47,4 +47,5 @@ type Repository interface {
 	GetPostsParentTreeDesc(id int ,limit int) (models.Posts, error)
 	GetPostsParentTreeSince(id int ,limit int, since int) (models.Posts, error)
 	GetPostsParentTreeSinceDesc(id int ,limit int, since int) (models.Posts, error)
+	GetPostNull(id int) (models.PostNullMessage, int)
 }

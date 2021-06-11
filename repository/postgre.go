@@ -218,6 +218,22 @@ func (sd SomeDatabase) GetPost(id int) (models.Post, int) {
 	return post[0], http.StatusOK
 }
 
+func (sd SomeDatabase) GetPostNull(id int) (models.PostNullMessage, int) {
+	var post []models.PostNullMessage
+	err := pgxscan.Select(context.Background(), sd.pool, &post,
+		`SELECT id, author, created, forum, message, parent, thread FROM posts WHERE id = $1`, id)
+
+	if errors.As(err, &pgx.ErrNoRows) || len(post) == 0 {
+		return models.PostNullMessage{}, http.StatusNotFound
+	}
+
+	if err != nil {
+		return models.PostNullMessage{}, http.StatusInternalServerError
+	}
+
+	return post[0], http.StatusOK
+}
+
 func (sd SomeDatabase) GetUser(name string) (models.User, int) {
 	var user []models.User
 	err := pgxscan.Select(context.Background(), sd.pool, &user,

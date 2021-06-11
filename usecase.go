@@ -26,4 +26,5 @@ type UseCase interface {
 	GetThreadSortFlat(slugOrId string, limit int, since int, desc bool) (models.Posts, int)
 	GetThreadSortTree(slugOrId string, limit int, since int, desc bool) (models.Posts, int)
 	GetThreadSortParentTree(slugOrId string, limit int, since int, desc bool) (models.Posts, int)
+	EditMessageNull(id int) (models.PostNullMessage, int)
 }

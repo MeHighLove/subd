@@ -148,8 +148,16 @@ func (s Smth) CreateNewPosts(newPosts models.Posts, slugOrId string) (models.Pos
 	now := time.Now()
 
 	var err error
+	var isExist bool
 	//Здесь тоже можно будет делать добавление в форум-юзер функцией!!!
 	for i := range newPosts {
+		isExist, err = s.repo.CheckUser(newPosts[i].Author)
+		if err != nil {
+			return models.Posts{}, http.StatusConflict
+		}
+		if !isExist {
+			return models.Posts{}, http.StatusNotFound
+		}
 		newPosts[i].Thread = int(thread.Id)
 		newPosts[i].Forum = thread.Forum
 		newPosts[i].Created = strfmt.DateTime(now)
@@ -227,21 +235,32 @@ func (s Smth) GetPost(id int, related string) (models.FullPost, int) {
 
 }
 
-func (s Smth) EditMessage(id int, message string) (models.Post, int) {
-	isExisted, err := s.repo.CheckPost(id)
-	if err != nil {
-		return models.Post{}, http.StatusInternalServerError
+func (s Smth) EditMessageNull(id int) (models.PostNullMessage, int) {
+	post, status := s.repo.GetPostNull(id)
+	if status == constants.NotFound {
+		return models.PostNullMessage{}, constants.NotFound
 	}
-	if !isExisted {
+
+
+	return post, http.StatusOK
+}
+
+func (s Smth) EditMessage(id int, message string) (models.Post, int) {
+	post, status := s.repo.GetPost(id)
+	if status == constants.NotFound {
 		return models.Post{}, constants.NotFound
 	}
+	if post.Message == message {
+		return post, http.StatusConflict
+	}
+	post.IsEdited = true
+	post.Message = message
 
-	err = s.repo.EditMessage(id, message)
+	err := s.repo.EditMessage(id, message)
 	if err != nil {
 		return models.Post{}, http.StatusInternalServerError
 	}
 
-	post, _ := s.repo.GetPost(id)
 
 	return post, http.StatusOK
 }
@@ -329,24 +348,30 @@ func (s Smth) UpdateUser(nickname string, user models.User) (models.User, int) {
 func (s Smth) UpdateThread(slugOrId string, newThread models.Thread) (models.Thread, int) {
 	var thread models.Thread
 	if id, err := strconv.Atoi(slugOrId); err != nil {
-		isExist, err := s.repo.CheckThread(slugOrId)
-		if err != nil {
-			return models.Thread{}, http.StatusInternalServerError
-		}
-		if !isExist {
+		oldThread, status := s.repo.GetThreadStatus(slugOrId)
+		if status == constants.NotFound {
 			return models.Thread{}, http.StatusNotFound
+		}
+		if newThread.Message == "" {
+			newThread.Message = oldThread.Message
+		}
+		if newThread.Title == "" {
+			newThread.Title = oldThread.Title
 		}
 		thread, err = s.repo.UpdateThread(slugOrId, newThread)
 		if err != nil {
 			return models.Thread{}, http.StatusInternalServerError
 		}
 	} else {
-		isExist, err := s.repo.CheckThreadById(id)
-		if err != nil {
-			return models.Thread{}, http.StatusInternalServerError
-		}
-		if !isExist {
+		oldThread, status := s.repo.GetThreadById(id)
+		if status == constants.NotFound {
 			return models.Thread{}, http.StatusNotFound
+		}
+		if newThread.Message == "" {
+			newThread.Message = oldThread.Message
+		}
+		if newThread.Title == "" {
+			newThread.Title = oldThread.Title
 		}
 		thread, err = s.repo.UpdateThreadById(id, newThread)
 	}

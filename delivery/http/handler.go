@@ -28,7 +28,7 @@ func CreateSmthHandler(e *echo.Echo, uc smth.UseCase) {
 	e.GET("/api/forum/:slug/threads", handler.GetThreads)
 	e.GET("/api/post/:id/details", handler.GetPostDetails)
 	e.POST("/api/post/:id/details", handler.EditMessage)
-	e.GET("/api/service/clear", handler.Clear)
+	e.POST("/api/service/clear", handler.Clear)
 	e.GET("/api/service/status", handler.Status)
 	e.POST("/api/thread/:slug_or_id/create", handler.CreatePosts)
 	e.GET("/api/thread/:slug_or_id/details", handler.GetThreadDetails)
@@ -190,11 +190,7 @@ func (sd SmthHandler) Status(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	if _, err := easyjson.MarshalToWriter(status, c.Response().Writer); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-	}
-
-	return nil
+	return c.JSON(http.StatusOK, status)
 }
 
 func (sd SmthHandler) Clear(c echo.Context) error {
@@ -222,9 +218,21 @@ func (sd SmthHandler) EditMessage(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusTeapot, err.Error())
 	}
 
+	if newMessage.Message == "" {
+		post, status := sd.UseCase.EditMessageNull(id)
+		if status == constants.NotFound {
+			return echo.NewHTTPError(http.StatusNotFound, "Can't find post with id "+fmt.Sprint(id))
+		}
+		return c.JSON(status, post)
+	}
+
 	post, status := sd.UseCase.EditMessage(id, newMessage.Message)
 	if status == constants.NotFound {
 		return echo.NewHTTPError(http.StatusNotFound, "Can't find post with id "+fmt.Sprint(id))
+	}
+	if status == http.StatusConflict {
+		postNull := models.ConvertPostToNullMessage(post)
+		return c.JSON(http.StatusOK, postNull)
 	}
 
 	return c.JSON(status, post)
