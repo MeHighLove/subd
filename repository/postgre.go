@@ -331,15 +331,15 @@ func (sd SomeDatabase) AddNewThread(newThread models.Thread) (uint64, error) {
 	return id, nil
 }
 
-func (sd SomeDatabase) AddPost(post models.Post) (models.Post, error) {
+func (sd SomeDatabase) AddPost(post *models.Post) error {
 	err := sd.pool.QueryRow(context.Background(),
 		`INSERT INTO posts VALUES (default, $1, $2, $3, default, $4, $5, $6) RETURNING id`,
 		post.Author, post.Created, post.Forum, post.Message, post.Parent, post.Thread).Scan(&post.Id)
 	if err != nil {
-		return models.Post{}, err
+		return err
 	}
 
-	return post, nil
+	return nil
 }
 
 func (sd SomeDatabase) GetForumUsers(slug string, limit int, since string, desc bool) (models.Users, error) {

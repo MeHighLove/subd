@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/labstack/echo"
 	"github.com/mailru/easyjson"
@@ -371,15 +372,21 @@ func (sd SmthHandler) CreateThread(c echo.Context) error {
 func (sd SmthHandler) CreatePosts(c echo.Context) error {
 	defer c.Request().Body.Close()
 
-	newPosts := &models.Posts{}
-
-	if err := easyjson.UnmarshalFromReader(c.Request().Body, newPosts); err != nil {
+	var posts []*models.Post
+	err := json.NewDecoder(c.Request().Body).Decode(&posts)
+	if err != nil {
 		return echo.NewHTTPError(http.StatusTeapot, err.Error())
 	}
 
+	/*newPosts := &models.Posts{}
+
+	if err := easyjson.UnmarshalFromReader(c.Request().Body, newPosts); err != nil {
+		return echo.NewHTTPError(http.StatusTeapot, err.Error())
+	}*/
+
 	slugOrId := c.Param("slug_or_id")
 
-	posts, status := sd.UseCase.CreateNewPosts(*newPosts, slugOrId)
+	status := sd.UseCase.CreateNewPosts(posts, slugOrId)
 	if status == constants.NotFound {
 		return echo.NewHTTPError(http.StatusNotFound, "Can't find user with name ")
 	}

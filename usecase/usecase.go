@@ -116,53 +116,52 @@ func (s Smth) GetThread(slugOrId string) (models.Thread, int) {
 	return thread, http.StatusOK
 }
 
-func (s Smth) CreateNewPosts(newPosts models.Posts, slugOrId string) (models.Posts, int) {
+func (s Smth) CreateNewPosts(newPosts []*models.Post, slugOrId string)  int {
 	var thread models.Thread
 	var status int
 	if id, err := strconv.Atoi(slugOrId); err != nil {
 		thread, status = s.repo.GetThreadStatus(slugOrId)
 		if status == constants.NotFound {
-			return models.Posts{}, http.StatusNotFound
+			return http.StatusNotFound
 		}
 	} else {
 		thread, status = s.repo.GetThreadById(id)
 		if status == http.StatusNotFound {
-			return models.Posts{}, status
+			return status
 		}
 		if status == http.StatusInternalServerError {
-			return models.Posts{}, http.StatusInternalServerError
+			return http.StatusInternalServerError
 		}
 	}
 
 	if len(newPosts) == 0 {
-		return models.Posts{}, http.StatusCreated
+		return http.StatusCreated
 	}
 
 	now := time.Now()
-
 	var err error
 	var isExist bool
 	//Здесь тоже можно будет делать добавление в форум-юзер функцией!!!
 	for i := range newPosts {
 		isExist, err = s.repo.CheckUser(newPosts[i].Author)
 		if err != nil {
-			return models.Posts{}, http.StatusConflict
+			return http.StatusConflict
 		}
 		if !isExist {
-			return models.Posts{}, http.StatusNotFound
+			return http.StatusNotFound
 		}
 		newPosts[i].Thread = int(thread.Id)
 		newPosts[i].Forum = thread.Forum
 		newPosts[i].Created = strfmt.DateTime(now)
-		newPosts[i], err = s.repo.AddPost(newPosts[i])
+		err = s.repo.AddPost(newPosts[i])
 		if err != nil {
-			return models.Posts{}, http.StatusConflict
+			return http.StatusConflict
 		}
 		err = s.repo.IncrementPosts(newPosts[i].Forum)
 		s.repo.AddForumUsers(newPosts[i].Forum, newPosts[i].Author)
 	}
 
-	return newPosts, http.StatusCreated
+	return http.StatusCreated
 }
 
 func (s Smth) CreateNewForum(newForum *models.Forum) (models.Forum, int) {

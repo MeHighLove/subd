@@ -30,7 +30,7 @@ type Repository interface {
 	UpdateUser(nickname string, user models.User) error
 	IncrementThreads(forum string) error
 	IncrementPosts(forum string) error
-	AddPost(post models.Post) (models.Post, error)
+	AddPost(post *models.Post) error
 	UpdateThread(slugOrId string, thread models.Thread) (models.Thread, error)
 	UpdateThreadById(id int, thread models.Thread) (models.Thread, error)
 	CheckVote(id int, nickname string) (bool, error)
