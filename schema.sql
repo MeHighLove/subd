@@ -24,8 +24,8 @@ CREATE TABLE users
     email    CITEXT UNIQUE             NOT NULL
 );
 
-CREATE INDEX user_nickname ON users using hash (nickname);
-CREATE INDEX user_email ON users using hash (email);
+CREATE INDEX users_nickname ON users using hash (nickname);
+CREATE INDEX users_email ON users using hash (email);
 
 CREATE TABLE forums
 (
@@ -37,8 +37,8 @@ CREATE TABLE forums
     slug    CITEXT UNIQUE NOT NULL
 );
 
-CREATE INDEX forums_slug ON forums USING hash (slug);
 CREATE INDEX forums_owners on forums (owner);
+CREATE INDEX forums_slug ON forums USING hash (slug);
 
 CREATE TABLE threads
 (
@@ -99,10 +99,10 @@ CREATE OR REPLACE FUNCTION insert_votes()
 $insert_votes$
 BEGIN
     IF new.voice > 0 THEN
-        UPDATE threads SET votes = (votes + 1)
+        UPDATE threads SET votes = votes + 1
         WHERE id = new.thread;
     ELSE
-        UPDATE threads SET votes = (votes - 1)
+        UPDATE threads SET votes = votes - 1
         WHERE id = new.thread;
     END IF;
     RETURN new;
@@ -120,12 +120,10 @@ CREATE OR REPLACE FUNCTION update_votes()
 $update_votes$
 BEGIN
     IF new.voice > 0 THEN
-        UPDATE threads
-        SET votes = (votes + 2)
+        UPDATE threads SET votes = votes + 2
         WHERE threads.id = new.thread;
     else
-        UPDATE threads
-        SET votes = (votes - 2)
+        UPDATE threads SET votes = votes - 2
         WHERE threads.id = new.thread;
     END IF;
     RETURN new;
@@ -148,10 +146,8 @@ BEGIN
     IF (new.parent = 0) THEN
         new.path := new.path || new.id;
     ELSE
-        SELECT thread, path
-        FROM posts p
-        WHERE p.thread = new.thread
-        AND p.id = new.parent
+        SELECT thread, path FROM posts p
+        WHERE p.thread = new.thread AND p.id = new.parent
         INTO parent_thread, parent_path;
         IF parent_thread != new.thread OR NOT FOUND THEN
             RAISE EXCEPTION USING ERRCODE = '00404';
