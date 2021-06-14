@@ -1,7 +1,6 @@
 package usecase
 
 import (
-	"github.com/go-openapi/strfmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -139,29 +138,8 @@ func (s Smth) CreateNewPosts(newPosts []*models.Post, slugOrId string)  int {
 	}
 
 	now := time.Now()
-	var err error
-	var isExist bool
-	//Здесь тоже можно будет делать добавление в форум-юзер функцией!!!
-	for i := range newPosts {
-		isExist, err = s.repo.CheckUser(newPosts[i].Author)
-		if err != nil {
-			return http.StatusConflict
-		}
-		if !isExist {
-			return http.StatusNotFound
-		}
-		newPosts[i].Thread = int(thread.Id)
-		newPosts[i].Forum = thread.Forum
-		newPosts[i].Created = strfmt.DateTime(now)
-		err = s.repo.AddPost(newPosts[i])
-		if err != nil {
-			return http.StatusConflict
-		}
-		err = s.repo.IncrementPosts(newPosts[i].Forum)
-		s.repo.AddForumUsers(newPosts[i].Forum, newPosts[i].Author)
-	}
 
-	return http.StatusCreated
+	return s.repo.AddPost(newPosts, thread, now)
 }
 
 func (s Smth) CreateNewForum(newForum *models.Forum) (models.Forum, int) {

@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"github.com/georgysavva/scany/pgxscan"
+	"github.com/go-openapi/strfmt"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"net/http"
 	event "subd"
 	"subd/models"
+	"time"
 )
 
 type SomeDatabase struct {
@@ -331,15 +333,32 @@ func (sd SomeDatabase) AddNewThread(newThread models.Thread) (uint64, error) {
 	return id, nil
 }
 
-func (sd SomeDatabase) AddPost(post *models.Post) error {
-	err := sd.pool.QueryRow(context.Background(),
-		`INSERT INTO posts VALUES (default, $1, $2, $3, default, $4, $5, $6) RETURNING id`,
-		post.Author, post.Created, post.Forum, post.Message, post.Parent, post.Thread).Scan(&post.Id)
-	if err != nil {
-		return err
+func (sd SomeDatabase) AddPost(newPosts []*models.Post, thread models.Thread, now time.Time) int {
+	for i := range newPosts {
+		newPosts[i].Thread = int(thread.Id)
+		newPosts[i].Forum = thread.Forum
+		newPosts[i].Created = strfmt.DateTime(now)
+		err := sd.pool.QueryRow(context.Background(),
+			`INSERT INTO posts VALUES (default, $1, $2, $3, default, $4, $5, $6) RETURNING id`,
+			newPosts[i].Author, newPosts[i].Created, newPosts[i].Forum,
+			newPosts[i].Message, newPosts[i].Parent, newPosts[i].Thread).Scan(&newPosts[i].Id)
+		if err != nil {
+			if err.Error() == "ERROR: 00404 (SQLSTATE 00404)" {
+				return http.StatusConflict
+			} else {
+				return http.StatusNotFound
+			}
+		}
+
+		_, err = sd.pool.Exec(context.Background(),
+			`UPDATE forums SET posts = posts + 1 WHERE slug = $1`, newPosts[i].Forum)
+		_, err = sd.pool.Exec(context.Background(),
+			`INSERT INTO forum_users 
+		VALUES ($1, $2)`,
+			newPosts[i].Forum, newPosts[i].Author)
 	}
 
-	return nil
+	return http.StatusCreated
 }
 
 func (sd SomeDatabase) GetForumUsers(slug string, limit int, since string, desc bool) (models.Users, error) {
