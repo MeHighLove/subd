@@ -24,22 +24,21 @@ CREATE TABLE users
     email    CITEXT UNIQUE             NOT NULL
 );
 
-CREATE INDEX user_nickname ON users using hash (nickname);
-CREATE INDEX user_email ON users using hash (email);
+CREATE INDEX users_nickname ON users using hash (nickname);
+CREATE INDEX users_email ON users using hash (email);
 
 CREATE TABLE forums
 (
     id      SERIAL PRIMARY KEY,
     title   TEXT                      NOT NULL,
-    owner   CITEXT REFERENCES users(nickname) ON DELETE  CASCADE    NOT NULL,
+    owner   CITEXT REFERENCES users(nickname) ON DELETE CASCADE NOT NULL,
     posts   INT DEFAULT 0,
     threads INT DEFAULT 0,
     slug    CITEXT UNIQUE NOT NULL
 );
 
-CREATE INDEX forums_full ON forums (slug, title, owner, posts, threads);
-CREATE INDEX forums_slug ON forums USING hash (slug);
 CREATE INDEX forums_owners on forums (owner);
+CREATE INDEX forums_slug ON forums USING hash (slug);
 
 CREATE TABLE threads
 (
@@ -56,7 +55,6 @@ CREATE TABLE threads
 create index threads_forum_created on threads (forum, created);
 create index threads_created on threads (created);
 create index threads_slug on threads using hash (slug);
-create index threads_id on threads using hash (id);
 
 CREATE TABLE posts
 (
@@ -75,8 +73,7 @@ create index posts_id on posts (id);
 create index posts_thread_created_id on posts (thread, created, id);
 create index posts_thread_id on posts (thread, id);
 create index posts_thread_path on posts (thread, path);
-create index posts_thread_parent_path on posts (thread, parent, path);
-create index posts_path1_path on posts ((path[1]), path);
+create index posts_path_1_path on posts ((path[1]));
 
 CREATE TABLE votes
 (
@@ -95,22 +92,20 @@ CREATE TABLE forum_users
     UNIQUE (forum, nickname)
 );
 
-create index forum_nickname on forum_users (forum, nickname);
 create index forum_users_nickname on forum_users (nickname);
-cluster forum_users using forum_nickname;
 
 CREATE OR REPLACE FUNCTION insert_votes()
     RETURNS TRIGGER AS
 $insert_votes$
 BEGIN
     IF new.voice > 0 THEN
-UPDATE threads SET votes = (votes + 1)
-WHERE id = new.thread;
-ELSE
-UPDATE threads SET votes = (votes - 1)
-WHERE id = new.thread;
-END IF;
-RETURN new;
+        UPDATE threads SET votes = votes + 1
+        WHERE id = new.thread;
+    ELSE
+        UPDATE threads SET votes = votes - 1
+        WHERE id = new.thread;
+    END IF;
+    RETURN new;
 END;
 $insert_votes$ language plpgsql;
 
@@ -125,15 +120,13 @@ CREATE OR REPLACE FUNCTION update_votes()
 $update_votes$
 BEGIN
     IF new.voice > 0 THEN
-UPDATE threads
-SET votes = (votes + 2)
-WHERE threads.id = new.thread;
-else
-UPDATE threads
-SET votes = (votes - 2)
-WHERE threads.id = new.thread;
-END IF;
-RETURN new;
+        UPDATE threads SET votes = votes + 2
+        WHERE threads.id = new.thread;
+    else
+        UPDATE threads SET votes = votes - 2
+        WHERE threads.id = new.thread;
+    END IF;
+    RETURN new;
 END;
 $update_votes$ LANGUAGE plpgsql;
 
@@ -147,23 +140,21 @@ CREATE OR REPLACE FUNCTION post_path()
     RETURNS TRIGGER AS
 $post_path$
 DECLARE
-parent_thread BIGINT;
+    parent_thread BIGINT;
     parent_path   BIGINT[];
 BEGIN
     IF (new.parent = 0) THEN
         new.path := new.path || new.id;
-ELSE
-SELECT thread, path
-FROM posts p
-WHERE p.thread = new.thread
-  AND p.id = new.parent
-    INTO parent_thread , parent_path;
-IF parent_thread != new.thread OR NOT FOUND THEN
+    ELSE
+        SELECT thread, path FROM posts p
+        WHERE p.thread = new.thread AND p.id = new.parent
+        INTO parent_thread, parent_path;
+        IF parent_thread != new.thread OR NOT FOUND THEN
             RAISE EXCEPTION USING ERRCODE = '00404';
-END IF;
+        END IF;
         new.path := parent_path || new.id;
-END IF;
-RETURN new;
+    END IF;
+    RETURN new;
 END;
 $post_path$ LANGUAGE plpgsql;
 

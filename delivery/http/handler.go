@@ -15,6 +15,7 @@ type SmthHandler struct {
 	UseCase   smth.UseCase
 }
 
+//Можно добавить функции на автоинкремент!
 func CreateSmthHandler(e *echo.Echo, uc smth.UseCase) {
 	handler := SmthHandler{UseCase: uc}
 
