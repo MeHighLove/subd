@@ -1,6 +1,9 @@
 package event
 
-import "subd/models"
+import (
+	"subd/models"
+	"time"
+)
 
 type Repository interface {
 	CheckUser(user string) (bool, error)
@@ -30,7 +33,7 @@ type Repository interface {
 	UpdateUser(nickname string, user models.User) error
 	IncrementThreads(forum string) error
 	IncrementPosts(forum string) error
-	AddPost(post models.Post) (models.Post, error)
+	AddPost(newPosts []*models.Post, thread models.Thread, now time.Time) int
 	UpdateThread(slugOrId string, thread models.Thread) (models.Thread, error)
 	UpdateThreadById(id int, thread models.Thread) (models.Thread, error)
 	CheckVote(id int, nickname string) (bool, error)

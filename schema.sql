@@ -15,7 +15,7 @@ DROP TRIGGER IF EXISTS insert_votes ON votes;
 DROP TRIGGER IF EXISTS update_votes ON votes;
 DROP TRIGGER IF EXISTS post_path ON posts;
 
-CREATE TABLE users
+CREATE UNLOGGED TABLE users
 (
     id       SERIAL PRIMARY KEY,
     nickname CITEXT COLLATE "C" UNIQUE NOT NULL,
@@ -27,7 +27,7 @@ CREATE TABLE users
 CREATE INDEX users_nickname ON users using hash (nickname);
 CREATE INDEX users_email ON users using hash (email);
 
-CREATE TABLE forums
+CREATE UNLOGGED TABLE forums
 (
     id      SERIAL PRIMARY KEY,
     title   TEXT                      NOT NULL,
@@ -37,10 +37,9 @@ CREATE TABLE forums
     slug    CITEXT UNIQUE NOT NULL
 );
 
-CREATE INDEX forums_owners on forums (owner);
 CREATE INDEX forums_slug ON forums USING hash (slug);
 
-CREATE TABLE threads
+CREATE UNLOGGED TABLE threads
 (
     id      SERIAL PRIMARY KEY,
     author  CITEXT REFERENCES users (nickname) ON DELETE CASCADE NOT NULL,
@@ -52,11 +51,10 @@ CREATE TABLE threads
     votes   INT                      DEFAULT 0
 );
 
-create index threads_forum_created on threads (forum, created);
-create index threads_created on threads (created);
 create index threads_slug on threads using hash (slug);
+create index threads_forum_created on threads (forum, created);
 
-CREATE TABLE posts
+CREATE UNLOGGED TABLE posts
 (
     id        BIGSERIAL PRIMARY KEY,
     author    CITEXT REFERENCES users (nickname) ON DELETE CASCADE NOT NULL,
@@ -69,13 +67,12 @@ CREATE TABLE posts
     path      BIGINT[]
 );
 
-create index posts_id on posts (id);
 create index posts_thread_created_id on posts (thread, created, id);
 create index posts_thread_id on posts (thread, id);
 create index posts_thread_path on posts (thread, path);
 create index posts_path_1_path on posts ((path[1]));
 
-CREATE TABLE votes
+CREATE UNLOGGED TABLE votes
 (
     thread   INT REFERENCES threads (id) NOT NULL,
     voice    INT                NOT NULL,
@@ -83,16 +80,17 @@ CREATE TABLE votes
     UNIQUE (thread, nickname)
 );
 
-create unique index votes_user_thread on votes (thread, nickname);
+create index votes_user_thread on votes (thread, nickname);
 
-CREATE TABLE forum_users
+CREATE UNLOGGED TABLE forum_users
 (
     forum    CITEXT REFERENCES forums (slug) ON DELETE CASCADE NOT NULL,
     nickname CITEXT COLLATE "C" REFERENCES users (nickname) ON DELETE CASCADE NOT NULL,
     UNIQUE (forum, nickname)
 );
 
-create index forum_users_nickname on forum_users (nickname);
+create index forum_users_nickname on forum_users using hash (nickname);
+create index forum_users_forum on forum_users using hash (forum);
 
 CREATE OR REPLACE FUNCTION insert_votes()
     RETURNS TRIGGER AS
@@ -150,7 +148,7 @@ BEGIN
         WHERE p.thread = new.thread AND p.id = new.parent
         INTO parent_thread, parent_path;
         IF parent_thread != new.thread OR NOT FOUND THEN
-            RAISE EXCEPTION USING ERRCODE = '00404';
+            RAISE EXCEPTION 'parent_thread_id is not equal to this one';
         END IF;
         new.path := parent_path || new.id;
     END IF;
