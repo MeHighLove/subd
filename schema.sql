@@ -37,7 +37,6 @@ CREATE UNLOGGED TABLE forums
     slug    CITEXT UNIQUE NOT NULL
 );
 
-CREATE INDEX forums_owners on forums (owner);
 CREATE INDEX forums_slug ON forums USING hash (slug);
 
 CREATE UNLOGGED TABLE threads
@@ -52,9 +51,8 @@ CREATE UNLOGGED TABLE threads
     votes   INT                      DEFAULT 0
 );
 
-create index threads_forum_created on threads (forum, created);
-create index threads_created on threads (created);
 create index threads_slug on threads using hash (slug);
+create index threads_forum_created on threads (forum, created);
 
 CREATE UNLOGGED TABLE posts
 (
@@ -69,7 +67,6 @@ CREATE UNLOGGED TABLE posts
     path      BIGINT[]
 );
 
-create index posts_id on posts (id);
 create index posts_thread_created_id on posts (thread, created, id);
 create index posts_thread_id on posts (thread, id);
 create index posts_thread_path on posts (thread, path);
@@ -83,7 +80,7 @@ CREATE UNLOGGED TABLE votes
     UNIQUE (thread, nickname)
 );
 
-create unique index votes_user_thread on votes (thread, nickname);
+create index votes_user_thread on votes (thread, nickname);
 
 CREATE UNLOGGED TABLE forum_users
 (
@@ -92,7 +89,8 @@ CREATE UNLOGGED TABLE forum_users
     UNIQUE (forum, nickname)
 );
 
-create index forum_users_nickname on forum_users (nickname);
+create index forum_users_nickname on forum_users using hash (nickname);
+create index forum_users_forum on forum_users using hash (forum);
 
 CREATE OR REPLACE FUNCTION insert_votes()
     RETURNS TRIGGER AS
@@ -150,7 +148,7 @@ BEGIN
         WHERE p.thread = new.thread AND p.id = new.parent
         INTO parent_thread, parent_path;
         IF parent_thread != new.thread OR NOT FOUND THEN
-            RAISE EXCEPTION USING ERRCODE = '00404';
+            RAISE EXCEPTION 'parent_thread_id is not equal to this one';
         END IF;
         new.path := parent_path || new.id;
     END IF;

@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"net/http"
+	"strings"
 	event "subd"
 	"subd/models"
 	"time"
@@ -343,7 +344,7 @@ func (sd SomeDatabase) AddPost(newPosts []*models.Post, thread models.Thread, no
 			newPosts[i].Author, newPosts[i].Created, newPosts[i].Forum,
 			newPosts[i].Message, newPosts[i].Parent, newPosts[i].Thread).Scan(&newPosts[i].Id)
 		if err != nil {
-			if err.Error() == "ERROR: 00404 (SQLSTATE 00404)" {
+			if strings.Contains(err.Error(), "parent_thread_id is not equal to this one") {
 				return http.StatusConflict
 			} else {
 				return http.StatusNotFound
